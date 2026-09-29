@@ -1,0 +1,6 @@
+name: dl
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+prefix: /home/uchralt/miniconda3/envs/dl

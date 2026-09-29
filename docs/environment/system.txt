@@ -1,0 +1,10 @@
+# Hardware and system, recorded 2026-09-20 08:45:52
+NVIDIA RTX A5000, 580.173.02, 24564 MiB
+CPU(s):                                  24
+Model name:                              12th Gen Intel(R) Core(TM) i9-12900K
+CPU(s) scaling MHz:                      63%
+Mem:              62          19          12           0          30          42
+Linux 7.0.0-31-generic
+python packages: torch 2.6.0+cu124 | monai 1.5.2 | numpy 2.3.5 | scipy 1.18.1 | nibabel 5.4.2 | scikit-image 0.26.0 | scikit-learn 1.9.0
+FreeSurfer: freesurfer-linux-ubuntu24_x86_64-8.2.0-20260314-d932c45
+FSL: 6.0.7.23

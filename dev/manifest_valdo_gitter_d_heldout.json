@@ -1,0 +1,107 @@
+[
+ {
+  "id": "sub-102",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-102",
+  "cohort": "valdo-1",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-109",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-109",
+  "cohort": "valdo-1",
+  "n_cmb": 0
+ },
+ {
+  "id": "sub-110",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-110",
+  "cohort": "valdo-1",
+  "n_cmb": 73
+ },
+ {
+  "id": "sub-201",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-201",
+  "cohort": "valdo-2",
+  "n_cmb": 0
+ },
+ {
+  "id": "sub-212",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-212",
+  "cohort": "valdo-2",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-215",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-215",
+  "cohort": "valdo-2",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-217",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-217",
+  "cohort": "valdo-2",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-221",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-221",
+  "cohort": "valdo-2",
+  "n_cmb": 11
+ },
+ {
+  "id": "sub-224",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-224",
+  "cohort": "valdo-2",
+  "n_cmb": 0
+ },
+ {
+  "id": "sub-234",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-234",
+  "cohort": "valdo-2",
+  "n_cmb": 2
+ },
+ {
+  "id": "sub-306",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-306",
+  "cohort": "valdo-3",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-309",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-309",
+  "cohort": "valdo-3",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-317",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-317",
+  "cohort": "valdo-3",
+  "n_cmb": 1
+ },
+ {
+  "id": "sub-325",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-325",
+  "cohort": "valdo-3",
+  "n_cmb": 3
+ },
+ {
+  "id": "sub-326",
+  "fold": 0,
+  "dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-326",
+  "cohort": "valdo-3",
+  "n_cmb": 1
+ }
+]

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.nii.gz
+*.npy
+*.pt
+*.pth
+data/
+ergebnisse/
+mbnet/
+logs/
+*.vor-*

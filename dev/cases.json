@@ -1,0 +1,582 @@
+{
+ "t2star": {
+  "cases": [
+   {
+    "id": "sub-101",
+    "fold": 1,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-101/sub-101_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-101/sub-101_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-101/sub-101_frst.nii.gz"
+   },
+   {
+    "id": "sub-102",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-102/sub-102_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-102/sub-102_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-102/sub-102_frst.nii.gz"
+   },
+   {
+    "id": "sub-103",
+    "fold": 2,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-103/sub-103_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-103/sub-103_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-103/sub-103_frst.nii.gz"
+   },
+   {
+    "id": "sub-104",
+    "fold": 0,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-104/sub-104_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-104/sub-104_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-104/sub-104_frst.nii.gz"
+   },
+   {
+    "id": "sub-105",
+    "fold": 1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-105/sub-105_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-105/sub-105_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-105/sub-105_frst.nii.gz"
+   },
+   {
+    "id": "sub-106",
+    "fold": 3,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-106/sub-106_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-106/sub-106_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-106/sub-106_frst.nii.gz"
+   },
+   {
+    "id": "sub-107",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-107/sub-107_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-107/sub-107_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-107/sub-107_frst.nii.gz"
+   },
+   {
+    "id": "sub-108",
+    "fold": 4,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-108/sub-108_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-108/sub-108_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-108/sub-108_frst.nii.gz"
+   },
+   {
+    "id": "sub-109",
+    "fold": -1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-109/sub-109_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-109/sub-109_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-109/sub-109_frst.nii.gz"
+   },
+   {
+    "id": "sub-110",
+    "fold": -1,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-110/sub-110_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-110/sub-110_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-110/sub-110_frst.nii.gz"
+   },
+   {
+    "id": "sub-111",
+    "fold": 0,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-111/sub-111_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-111/sub-111_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-111/sub-111_frst.nii.gz"
+   },
+   {
+    "id": "sub-201",
+    "fold": -1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-201/sub-201_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-201/sub-201_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-201/sub-201_frst.nii.gz"
+   },
+   {
+    "id": "sub-202",
+    "fold": 3,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-202/sub-202_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-202/sub-202_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-202/sub-202_frst.nii.gz"
+   },
+   {
+    "id": "sub-203",
+    "fold": 0,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-203/sub-203_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-203/sub-203_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-203/sub-203_frst.nii.gz"
+   },
+   {
+    "id": "sub-204",
+    "fold": 2,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-204/sub-204_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-204/sub-204_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-204/sub-204_frst.nii.gz"
+   },
+   {
+    "id": "sub-205",
+    "fold": 4,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-205/sub-205_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-205/sub-205_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-205/sub-205_frst.nii.gz"
+   },
+   {
+    "id": "sub-206",
+    "fold": 1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-206/sub-206_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-206/sub-206_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-206/sub-206_frst.nii.gz"
+   },
+   {
+    "id": "sub-207",
+    "fold": 3,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-207/sub-207_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-207/sub-207_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-207/sub-207_frst.nii.gz"
+   },
+   {
+    "id": "sub-208",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-208/sub-208_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-208/sub-208_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-208/sub-208_frst.nii.gz"
+   },
+   {
+    "id": "sub-209",
+    "fold": 3,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-209/sub-209_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-209/sub-209_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-209/sub-209_frst.nii.gz"
+   },
+   {
+    "id": "sub-210",
+    "fold": 0,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-210/sub-210_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-210/sub-210_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-210/sub-210_frst.nii.gz"
+   },
+   {
+    "id": "sub-211",
+    "fold": 2,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-211/sub-211_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-211/sub-211_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-211/sub-211_frst.nii.gz"
+   },
+   {
+    "id": "sub-212",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-212/sub-212_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-212/sub-212_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-212/sub-212_frst.nii.gz"
+   },
+   {
+    "id": "sub-213",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-213/sub-213_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-213/sub-213_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-213/sub-213_frst.nii.gz"
+   },
+   {
+    "id": "sub-214",
+    "fold": 4,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-214/sub-214_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-214/sub-214_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-214/sub-214_frst.nii.gz"
+   },
+   {
+    "id": "sub-215",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-215/sub-215_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-215/sub-215_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-215/sub-215_frst.nii.gz"
+   },
+   {
+    "id": "sub-216",
+    "fold": 0,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-216/sub-216_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-216/sub-216_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-216/sub-216_frst.nii.gz"
+   },
+   {
+    "id": "sub-217",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-217/sub-217_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-217/sub-217_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-217/sub-217_frst.nii.gz"
+   },
+   {
+    "id": "sub-218",
+    "fold": 2,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-218/sub-218_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-218/sub-218_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-218/sub-218_frst.nii.gz"
+   },
+   {
+    "id": "sub-219",
+    "fold": 1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-219/sub-219_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-219/sub-219_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-219/sub-219_frst.nii.gz"
+   },
+   {
+    "id": "sub-220",
+    "fold": 3,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-220/sub-220_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-220/sub-220_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-220/sub-220_frst.nii.gz"
+   },
+   {
+    "id": "sub-221",
+    "fold": -1,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-221/sub-221_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-221/sub-221_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-221/sub-221_frst.nii.gz"
+   },
+   {
+    "id": "sub-222",
+    "fold": 4,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-222/sub-222_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-222/sub-222_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-222/sub-222_frst.nii.gz"
+   },
+   {
+    "id": "sub-223",
+    "fold": 2,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-223/sub-223_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-223/sub-223_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-223/sub-223_frst.nii.gz"
+   },
+   {
+    "id": "sub-224",
+    "fold": -1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-224/sub-224_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-224/sub-224_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-224/sub-224_frst.nii.gz"
+   },
+   {
+    "id": "sub-225",
+    "fold": 0,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-225/sub-225_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-225/sub-225_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-225/sub-225_frst.nii.gz"
+   },
+   {
+    "id": "sub-226",
+    "fold": 2,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-226/sub-226_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-226/sub-226_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-226/sub-226_frst.nii.gz"
+   },
+   {
+    "id": "sub-227",
+    "fold": 4,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-227/sub-227_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-227/sub-227_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-227/sub-227_frst.nii.gz"
+   },
+   {
+    "id": "sub-228",
+    "fold": 1,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-228/sub-228_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-228/sub-228_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-228/sub-228_frst.nii.gz"
+   },
+   {
+    "id": "sub-229",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-229/sub-229_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-229/sub-229_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-229/sub-229_frst.nii.gz"
+   },
+   {
+    "id": "sub-230",
+    "fold": 1,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-230/sub-230_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-230/sub-230_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-230/sub-230_frst.nii.gz"
+   },
+   {
+    "id": "sub-231",
+    "fold": 3,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-231/sub-231_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-231/sub-231_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-231/sub-231_frst.nii.gz"
+   },
+   {
+    "id": "sub-232",
+    "fold": 1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-232/sub-232_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-232/sub-232_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-232/sub-232_frst.nii.gz"
+   },
+   {
+    "id": "sub-233",
+    "fold": 0,
+    "klass": 0,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-233/sub-233_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-233/sub-233_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-233/sub-233_frst.nii.gz"
+   },
+   {
+    "id": "sub-234",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-234/sub-234_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-234/sub-234_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-234/sub-234_frst.nii.gz"
+   },
+   {
+    "id": "sub-301",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-301/sub-301_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-301/sub-301_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-301/sub-301_frst.nii.gz"
+   },
+   {
+    "id": "sub-302",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-302/sub-302_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-302/sub-302_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-302/sub-302_frst.nii.gz"
+   },
+   {
+    "id": "sub-303",
+    "fold": 1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-303/sub-303_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-303/sub-303_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-303/sub-303_frst.nii.gz"
+   },
+   {
+    "id": "sub-304",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-304/sub-304_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-304/sub-304_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-304/sub-304_frst.nii.gz"
+   },
+   {
+    "id": "sub-305",
+    "fold": 2,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-305/sub-305_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-305/sub-305_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-305/sub-305_frst.nii.gz"
+   },
+   {
+    "id": "sub-306",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-306/sub-306_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-306/sub-306_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-306/sub-306_frst.nii.gz"
+   },
+   {
+    "id": "sub-307",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-307/sub-307_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-307/sub-307_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-307/sub-307_frst.nii.gz"
+   },
+   {
+    "id": "sub-308",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-308/sub-308_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-308/sub-308_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-308/sub-308_frst.nii.gz"
+   },
+   {
+    "id": "sub-309",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-309/sub-309_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-309/sub-309_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-309/sub-309_frst.nii.gz"
+   },
+   {
+    "id": "sub-310",
+    "fold": 1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-310/sub-310_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-310/sub-310_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-310/sub-310_frst.nii.gz"
+   },
+   {
+    "id": "sub-311",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-311/sub-311_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-311/sub-311_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-311/sub-311_frst.nii.gz"
+   },
+   {
+    "id": "sub-312",
+    "fold": 2,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-312/sub-312_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-312/sub-312_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-312/sub-312_frst.nii.gz"
+   },
+   {
+    "id": "sub-313",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-313/sub-313_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-313/sub-313_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-313/sub-313_frst.nii.gz"
+   },
+   {
+    "id": "sub-314",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-314/sub-314_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-314/sub-314_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-314/sub-314_frst.nii.gz"
+   },
+   {
+    "id": "sub-315",
+    "fold": 1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-315/sub-315_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-315/sub-315_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-315/sub-315_frst.nii.gz"
+   },
+   {
+    "id": "sub-316",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-316/sub-316_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-316/sub-316_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-316/sub-316_frst.nii.gz"
+   },
+   {
+    "id": "sub-317",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-317/sub-317_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-317/sub-317_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-317/sub-317_frst.nii.gz"
+   },
+   {
+    "id": "sub-318",
+    "fold": 2,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-318/sub-318_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-318/sub-318_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-318/sub-318_frst.nii.gz"
+   },
+   {
+    "id": "sub-319",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-319/sub-319_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-319/sub-319_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-319/sub-319_frst.nii.gz"
+   },
+   {
+    "id": "sub-320",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-320/sub-320_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-320/sub-320_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-320/sub-320_frst.nii.gz"
+   },
+   {
+    "id": "sub-321",
+    "fold": 1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-321/sub-321_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-321/sub-321_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-321/sub-321_frst.nii.gz"
+   },
+   {
+    "id": "sub-322",
+    "fold": 0,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-322/sub-322_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-322/sub-322_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-322/sub-322_frst.nii.gz"
+   },
+   {
+    "id": "sub-323",
+    "fold": 2,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-323/sub-323_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-323/sub-323_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-323/sub-323_frst.nii.gz"
+   },
+   {
+    "id": "sub-324",
+    "fold": 3,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-324/sub-324_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-324/sub-324_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-324/sub-324_frst.nii.gz"
+   },
+   {
+    "id": "sub-325",
+    "fold": -1,
+    "klass": 2,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-325/sub-325_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-325/sub-325_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-325/sub-325_frst.nii.gz"
+   },
+   {
+    "id": "sub-326",
+    "fold": -1,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-326/sub-326_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-326/sub-326_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-326/sub-326_frst.nii.gz"
+   },
+   {
+    "id": "sub-327",
+    "fold": 4,
+    "klass": 1,
+    "mask": "/home/uchralt/data/extern/valdo2021/Task2/sub-327/sub-327_space-T2S_CMB.nii.gz",
+    "image": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-327/sub-327_image.nii.gz",
+    "frst": "/home/uchralt/data/work/valdo-t2s/dev/preproc/sub-327/sub-327_frst.nii.gz"
+   }
+  ]
+ }
+}
