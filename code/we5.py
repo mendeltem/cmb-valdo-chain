@@ -260,14 +260,14 @@ def cv_abstimmung(faelle, ventmasken):
         tp_verlust_v1=tp_verlust["V1"],
         tp_verlust_v2=tp_verlust["V2"],
         groesse_grid_f1=grid_z,
-        entscheidung=("Stufe behalten nur wenn sie auf der CV (gepoolt, 57 Faelle) F1 "
-                      "verbessert; Groessenfilter in mm3 je Fall (Voxel x pixdim); "
-                      "SynthSeg-Filter: Schwerpunkt der Kandidatenkomponente in "
-                      "Ventrikel(V1)/Ventrikel+CSF(V2); V1 und V2 getrennt gemessen."),
+        entscheidung=("keep a stage only if it improves F1 on the CV (pooled, 57 cases); "
+                      "size filter in mm3 per case (voxel x pixdim); "
+                      "SynthSeg filter: centroid of the candidate component in "
+                      "ventricles (V1) / ventricles+CSF (V2); V1 and V2 measured separately."),
         eingefroren_am=time.strftime("%Y-%m-%d %H:%M:%S"),
-        hinweis=("Kette auf CV-Falten abgestimmt und EINGEFROREN, bevor das "
-                 "Validierungsset (15 Faelle) angefasst wurde. Weiteres Nachjustieren "
-                 "nach dem Blick auf die Validierungszahlen ist verboten (Set verbrannt)."),
+        hinweis=("chain tuned on the CV folds and FROZEN before the validation set "
+                 "(15 cases) was touched. Any further adjustment after looking at the "
+                 "validation numbers is forbidden (the set would be burnt)."),
     )
 
 # ------------------------------------------------------------------- Validation (ONCE)

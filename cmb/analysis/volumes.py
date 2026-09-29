@@ -64,7 +64,7 @@ def main():
     out = absolute(a.csv); os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
-    print(f"\nSummen ({len(rows)} Faelle): Referenz {tot['referenz_ml']:.3f} ml | " + " | ".join(f"{n} {tot[n]:.3f} ml" for n, _, _ in runs) + f"\n-> {out}")
+    print(f"\nTotals ({len(rows)} cases): reference {tot['referenz_ml']:.3f} ml | " + " | ".join(f"{n} {tot[n]:.3f} ml" for n, _, _ in runs) + f"\n-> {out}")
 
 
 if __name__ == "__main__":

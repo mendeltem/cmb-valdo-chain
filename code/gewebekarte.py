@@ -116,8 +116,8 @@ def main():
     orte = {o: dict(vorhersagen=pred_n[o], davon_auf_referenz=pred_tp[o], fp=pred_n[o] - pred_tp[o],
                     referenz_cmb=ref_n[o], davon_gefunden=ref_gef[o]) for o in ORTE}
     erg = dict(netz=os.path.relpath(netz, ROOT), n_faelle=n_faelle, faelle_ohne_synthseg=ohne_seg,
-               klassen={"0": "Hintergrund", "1": "CSF", "2": "GM", "3": "WM", "4": "CMB"},
-               grenze="tiefes Marklager zaehlt als lobaer (SynthSeg trennt es nicht)", orte=orte)
+               klassen={"0": "background", "1": "CSF", "2": "GM", "3": "WM", "4": "CMB"},
+               grenze="deep white matter counts as lobar (SynthSeg does not separate it)", orte=orte)
     json.dump(erg, open(f"{aus}/orte.json", "w"), indent=1, ensure_ascii=False)
     print(f"{erg['netz']}: {n_faelle} cases, {ohne_seg} without SynthSeg")
     print(f"{'Location':16s} {'Pred.':>8s} {'on ref':>8s} {'FP':>5s} | {'Ref CMB':>7s} {'found':>8s}")
