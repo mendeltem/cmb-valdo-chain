@@ -47,6 +47,29 @@ derivatives/manual-cmb/sub-XXX/anat/sub-XXX_..._CMB.nii.gz                      
 `catalina/hirn_und_bias.py <swi|t2star>` writes the first two ONCE and skips cases that already have them — HD-BET and bias correction
 are never repeated. A case list `faelle.json` (id, fold, image, mask, brain, label paths) drives everything downstream.
 
+## Quality control of the VALDO result
+Slice viewer, public: **https://mendeltem.github.io/valdo-cmb-qc/slices/** (two axial images per patient, reference left, model outlines
+right, scroll = z, volumes in ml; built by `pipeline/11_qc_viewer.py`). Overview page with per-patient F1 and the pipeline diagram:
+https://mendeltem.github.io/valdo-cmb-qc/ . VALDO images only (CC BY-NC-SA 4.0); in-house cohorts are never published.
+
+## Pipeline scripts (numbered = order)
+```
+python pipeline/00_selftest.py              # no data, CPU, < 1 min: imports, FRST, lesion metric, U-Net forward pass, dry run of all steps
+python pipeline/01_preprocess.py            # brain mask + FSL FAST -B once per case, then the image without vessel inpainting
+python pipeline/02_grid_frst.py             # 0.5 x 0.5 x 1 mm grid + FRST channel
+python pipeline/03_synthseg.py              # FreeSurfer SynthSeg tissue maps (CSF rule)
+python pipeline/04_manifest.py              # 57 CV cases with folds
+python pipeline/05_train_unet.py            # a03-aniso, seeds 42 and 1 (GPU)
+python pipeline/06_ensemble_score.py        # ensemble, raw F1, CSF rule -> 0.647
+python pipeline/07_candidates.py            # 16-mm candidate cubes for the second stage
+python pipeline/08_stage2_classifier.py     # pooled 3D CNN (needs private candidates) / transfer variant
+python pipeline/09_external_momeni.py       # external public SWI cohort -> 0.613
+python pipeline/10_baseline_microbleednet.py# original MicrobleedNet fine-tuned on the same folds
+python pipeline/11_qc_viewer.py             # slice viewer
+```
+Every script accepts `--dry-run` (print the exact commands), `--force` (repeat a finished step), `--queue` (GPU steps through the job queue)
+and `--list` (state of all steps). Steps already finished on disk are skipped; the done-checks live in `cmb/experiments/kern.py`.
+
 ## Reproduce (VALDO)
 ```bash
 python -m cmb.experiments.kern --list            # every core step with its done-check; --dry-run prints the exact commands

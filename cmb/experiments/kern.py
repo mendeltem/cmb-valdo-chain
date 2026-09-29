@@ -23,11 +23,17 @@ def trained(run):            # a training run counts as done with 5 fold models
 
 STEPS = [
   # name, gpu?, done-check, command, what it establishes
+  ("preprocess",      False, lambda: len(glob.glob(f"{ROOT}/dev/preproc/sub-*/fast_restore.nii.gz")) >= 72,
+   f"{PY} code/preprocess.py --all --out dev/preproc --skip-done", "brain mask + FSL FAST -B once per case (skips finished cases; never repeated)"),
+  ("preproc-roh",     False, lambda: len(glob.glob(f"{ROOT}/dev/preproc_roh/sub-*/sub-*_image.nii.gz")) >= 72,
+   f"{PY} code/preproc_roh_bauen.py", "inverted, bias-corrected image WITHOUT vessel inpainting (the inpainting hid 109/236 reference CMB)"),
   ("grid",            False, lambda: len(glob.glob(f"{ROOT}/dev/gitter_d/*/info.json")) >= 57,
    f"GITTER_C_QUELLE={ROOT}/dev/preproc_roh GITTER_C_ZIEL={ROOT}/dev/gitter_d {PY} code/gitter_c_bauen.py --proc 8",
    "Training grid 0.5x0.5x1 mm from the UNPAINTED preprocessing (no vessel inpainting: +0.136), FRST recomputed"),
   ("manifest",        False, lambda: os.path.exists(f"{ROOT}/{MAN}"),
    f"{PY} -m cmb.transfer.build_valdo_manifest --grid dev/gitter_d --out {MAN}", "57 CV cases, 139 lesions (15 held-out cases excluded)"),
+  ("synthseg",        False, lambda: len(glob.glob(f"{ROOT}/dev/synthseg/*_synthseg.nii.gz")) >= 72,
+   f"{PY} code/we5.py --synthseg --parallel 4", "SynthSeg tissue maps (FreeSurfer mri_synthseg, CPU) resampled to the grid; needed by the CSF rule"),
   ("train-basis",     True,  lambda: trained(f"{T}/a03-aniso-e60-gd"),
    f"{PY} code/turnier.py --netz a03-aniso --epochen 60 --gitter dev/gitter_d", "Baseline a03-aniso, seed 42: 0.585 raw"),
   ("train-s1",        True,  lambda: trained(f"{T}/a03-aniso-s1-e60-gd"),
@@ -75,6 +81,11 @@ STEPS = [
    " && ".join(f"{PY} -m cmb.baselines.microbleednet_finetune finetune --cohort valdo --fold {k}" for k in range(5)), "original fine-tuned on our folds (~75 min per fold)"),
   ("mbnet-score",     False, lambda: False,
    f"{PY} -m cmb.baselines.microbleednet_finetune score --cohort valdo", "fair baseline: same cases, same folds, same metric"),
+  ("qc-viewer",       False, lambda: os.path.exists(f"{ROOT}/ergebnisse/qc/valdo_slices/betrachter.html"),
+   f'{PY} -m cmb.review.build_slice_viewer --dataset VALDO --manifest {MAN} --run basis={T}/ens2-a03-aniso-e60-gd "basis+liquor={T}/ens2-a03-aniso-e60-gd:csf" '
+   f'--synthseg "{SYN}" --out ergebnisse/qc/valdo_slices --single-file 480 --info "basis=two-seed ensemble of the anisotropic 3D U-Net, cell 0.3 / 2 mm3" '
+   f'"basis+liquor=same, plus the SynthSeg CSF rule (deliverable)"',
+   "slice viewer: reference left, model outlines right, scroll = z (published at mendeltem.github.io/valdo-cmb-qc/slices/)"),
 ]
 
 
