@@ -120,7 +120,7 @@ def main() -> None:
             out["union"][f"{t:g}"] = dict(candidates_summed=cand, reached=len(union), ceiling_sensitivity=round(len(union) / total, 3),
                                           perfect_f1=round(perfect_chain_f1(len(union), total), 3), gain_over_best=len(union) - best, only_this_run=only)
             print(f"{'VEREINIGUNG':22s} {t:9g} {cand:11d} {len(union):9d} {len(union) / total:8.3f} {perfect_chain_f1(len(union), total):9.3f}"
-                  f"   (+{len(union) - best} gegen den besten Einzellauf; nur von einem Lauf erreicht: {only})")
+                  f"   (+{len(union) - best} versus the best single run; reached by only one run: {only})")
     if args.json:
         out["total_lesions"] = total; out["cases"] = len(cases_seen)
         json.dump(out, open(absolute(args.json), "w"), indent=1)

@@ -274,7 +274,7 @@ def neues_modell(P):
 
 def zeit_pruefen(t0, limit, was):
     if limit and time.time() - t0 > limit:
-        raise RuntimeError(f"Zeitzaun {limit:.0f}s erreicht vor {was}")
+        raise RuntimeError(f"time fence {limit:.0f}s reached before {was}")
 
 def train_falte(konf, k, outd, *, max_ep=MAX_EPOCHEN, min_ep=MIN_EPOCHEN, eval_jede=EVAL_JEDE,
                 geduld=GEDULD, n_patches=None, zeit_limit=FOLD_TIME_MAX_S):
