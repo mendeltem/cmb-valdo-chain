@@ -31,6 +31,7 @@ def dry_run():
     from cmb.experiments import kern
     sys.argv = ["kern", "--all", "--dry-run", "--force"]; kern.main()
 
-for n, f in [("imports", imports), ("FRST", frst_test), ("lesion metric", metric_test), ("U-Net forward", net_forward), ("dry run of all steps", dry_run)]:
+# the legacy modules are imported first so that the repository copies are tested, not the ones a cmb module may add to sys.path
+for n, f in [("FRST", frst_test), ("lesion metric", metric_test), ("U-Net forward", net_forward), ("imports", imports), ("dry run of all steps", dry_run)]:
     check(n, f)
 print("SELFTEST", "PASSED" if ok else "FAILED"); sys.exit(0 if ok else 1)
