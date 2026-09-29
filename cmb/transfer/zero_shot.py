@@ -30,11 +30,11 @@ def main() -> None:
     parser.add_argument("--manifest", nargs="+", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--landmarks", default="dev/landmarken_valdo.json",
-                        help="Referenzdatei fuer --norm landmarken; MUSS dieselbe sein wie beim Training")
+                        help="Reference file for --norm landmarken; MUST be the same one used for training")
     parser.add_argument("--norm", choices=["max", "z", "p995", "landmarken"], default="max",
-                        help="Intensitaetsskala; MUSS zu der des Trainings passen. max = durch das Maximum im Hirn (Vorgabe, wie im Original). "
-                             "landmarken ist die gemessen beste Angleichung (Kontrast-Spanne 0.018 gegen 0.060 heute), z die schlechteste "
-                             "von sechs (0.362) -- ARBEIT.md 5aa.")
+                        help="Intensity scale; MUST match the one used for training. max = divided by the maximum inside the brain (default, as in the original). "
+                             "landmarken is the measured best alignment (contrast span 0.018 vs 0.060 today), z the worst "
+                             "of six (0.362) -- WORKLOG.md 5aa.")
     args = parser.parse_args()
     import cv5                                   # legacy inference code (sliding window with half stride)
     import turnier

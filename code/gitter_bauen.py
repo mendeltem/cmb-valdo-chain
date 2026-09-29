@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""we2 Gitter: Bauen der beiden Eingabevarianten.
+"""we2 grid: build the two input variants.
 
-A "nativ":     Originalgitter je Fall (dev/preproc/<id>/), Patch 96x64x48.
-B "gemeinsam": alle Faelle resampelt auf 0.5 x 0.5 x 1.0 mm (Bild linear,
-                FRST linear, Label nearest), Patch (96,64,48) umspannt damit
-                physisch 48 x 32 x 48 mm -- in Kohorte 2 (z=0.8 mm) das
-                selbe Volumen wie A (48 Voxel * 0.8 mm = 38.4 mm ~ 48 mm).
+A "native":  original grid per case (dev/preproc/<id>/), patch 96x64x48.
+B "shared":  all cases resampled to 0.5 x 0.5 x 1.0 mm (image linear,
+                FRST linear, label nearest), patch (96,64,48) thus spans
+                physically 48 x 32 x 48 mm -- in cohort 2 (z=0.8 mm) the
+                same volume as A (48 voxels * 0.8 mm = 38.4 mm ~ 48 mm).
 
-Nur Falten 0-4 (Training+Test), Validierung (fold -1) bleibt aussen.
-Wiederaufnehmbar: fertige Faelle (alle 4 Dateien da) werden uebersprungen.
+Only folds 0-4 (training+test), validation (fold -1) stays outside.
+Resumable: finished cases (all 4 files present) are skipped.
 """
 import os, sys, json, glob
 import numpy as np
@@ -17,13 +17,13 @@ import nibabel as nib
 
 ROOT = "/home/uchralt/data/work/valdo-t2s"
 ZIEL = [0.5, 0.5, 1.0]  # mm
-PATCH_B = (96, 64, 48)  # (x, y, z) Voxel
+PATCH_B = (96, 64, 48)  # (x, y, z) voxels
 PATCH_MM_B = [PATCH_B[0] * ZIEL[0], PATCH_B[1] * ZIEL[1], PATCH_B[2] * ZIEL[2]]
-PATCH_A_MM = [96 * 0.48828125, 64 * 0.48828125, 48 * 0.8]  # in Ko2, Patch A
+PATCH_A_MM = [96 * 0.48828125, 64 * 0.48828125, 48 * 0.8]  # in cohort 2, patch A
 
 def resample(src, dst, spacing, interp):
-    """Resample auf Ziel-Spacing, physikalische Ausdehnung und Richtung bleiben
-    erhalten. SimpleITK 2.5.6: alter Resample-API (kein ResampleImage)."""
+    """Resample onto the target spacing; physical extent and direction stay
+    unchanged. SimpleITK 2.5.6: old Resample API (no ResampleImage)."""
     img = sitk.ReadImage(src)
     osize = img.GetSize()
     osp = img.GetSpacing()
@@ -77,15 +77,15 @@ def main():
         info["shapes_b"][f"{shp} faktor={faktor}"] = info["shapes_b"].get(f"{shp} faktor={faktor}", 0) + 1
         info["spacing_faktoren"][pid] = faktor
         info["faelle_gesamt"] += 1
-        print(pid, "->", shp, "faktor", faktor, flush=True)
-    # Warnung + Messung: Ko1 wird in z von 4.0 auf 1.0 interpoliert
-    info["warnung"] = ("Kohorte 1: z-Spacing 4.0 mm -> 1.0 mm, d.h. 3-fache "
-                       "lineare Interpolation ERFINDET Zwischenschichten, die in "
-                       "keiner Messung existierten. Genau deshalb der Vergleich A/B: "
-                       "B muss zeigen, dass das Netz nicht Kohortengeometrie "
-                       "lernt, sondern Blutungen.")
+        print(pid, "->", shp, "factor", faktor, flush=True)
+    # Warning + note: cohort 1 is interpolated in z from 4.0 to 1.0
+    info["warnung"] = ("Cohort 1: z-spacing 4.0 mm -> 1.0 mm, i.e. 3x "
+                       "linear interpolation INVENTS intermediate slices that did not "
+                       "exist in any measurement. This is exactly why the A/B comparison: "
+                       "B must show that the network learns bleeds, "
+                       "not cohort geometry.")
     json.dump(info, open(f"{ROOT}/dev/gitter_b_info.json", "w"), indent=1, ensure_ascii=False)
-    print("FERTIG:", info["faelle_b"], "Faelle resampelt")
+    print("DONE:", info["faelle_b"], "cases resampled")
 
 if __name__ == "__main__":
     main()

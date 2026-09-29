@@ -1,6 +1,6 @@
 """Do the cohorts differ in their IMAGES, in their ANNOTATIONS, or in both?  (user question, 2026-09-21)
 
-Joint training of several cohorts lowered every cohort's score (ARBEIT.md 5e, 5h). Two explanations are on the table:
+Joint training of several cohorts lowered every cohort's score (WORKLOG.md 5e, 5h). Two explanations are on the table:
 the images differ (sequence, slice thickness, masks) or the experts marked differently (what counts as a microbleed, how
 generously it is outlined). This script puts numbers on both, on the common training grid (0.5 x 0.5 x 1 mm, inverted
 scale: lesions bright), per cohort:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""T1 und T2 als Zusatzkanaele auf dem Trainingsgitter (Arm 8, 29.09.2026; Nutzerauftrag "T1-Kanal fuer VALDO").
-Quelle: VALDO <id>_space-T2S_desc-masked_T1/T2 (im T2S-Raum, schaedelfrei; 33 von 72 T1 tragen NaN als Randschale -> nan_to_num).
-Ziel: dev/gitter_d/<id>/<id>_t1.nii.gz, _t2.nii.gz -- linear auf Gitter und Zuschnitt des Falls gelegt (resample_from_to auf die
-Affine/Form von <id>_image.nii.gz), im Hirn (image > 0) durch das 99.5-Perzentil geteilt und auf [0, 1] gekappt, ausserhalb 0.
-Nicht invertiert (T1/T2 tragen keine Blutungshelligkeit, nur Anatomie). Prueft Form und Affine.
+"""T1 and T2 as additional channels on the training grid (arm 8, 29 Sep 2026; user request "T1 channel for VALDO").
+Source: VALDO <id>_space-T2S_desc-masked_T1/T2 (in T2S space, skull-stripped; 33 of 72 T1 carry NaN as an edge shell -> nan_to_num).
+Target: dev/gitter_d/<id>/<id>_t1.nii.gz, _t2.nii.gz -- resampled linearly onto the grid and crop of the case (resample_from_to onto the
+affine/shape of <id>_image.nii.gz), divided by the 99.5th percentile within the brain (image > 0) and clipped to [0, 1], 0 outside.
+Not inverted (T1/T2 carry no bleeding brightness, only anatomy). Checks shape and affine.
     python code/zusatzkanaele_bauen.py [--manifest dev/manifest_valdo_gitter_d.json] [--proc 6]
 """
 import argparse, json, os
@@ -30,5 +30,5 @@ if __name__ == "__main__":
     a = ap.parse_args(); cases = json.load(open(a.manifest))
     with Pool(a.proc) as pool:
         res = dict(pool.map(fall, cases))
-    print(len(res), "Faelle; T1 mit NaN:", sum(r["t1"]["nan"] > 0 for r in res.values()), "| Mittel im Hirn T1 %.3f T2 %.3f" % (np.mean([r["t1"]["mean_brain"] for r in res.values()]), np.mean([r["t2"]["mean_brain"] for r in res.values()])))
+    print(len(res), "cases; T1 with NaN:", sum(r["t1"]["nan"] > 0 for r in res.values()), "| mean in brain T1 %.3f T2 %.3f" % (np.mean([r["t1"]["mean_brain"] for r in res.values()]), np.mean([r["t2"]["mean_brain"] for r in res.values()])))
     json.dump(res, open(f"{ROOT}/dev/zusatzkanaele_t1t2.json", "w"), indent=1)

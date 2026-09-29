@@ -139,7 +139,7 @@ def build_patient(case: Dict, runs: List[Dict], synthseg: Optional[str], out_dir
     return dict(id=cid, cohort=case.get("cohort", ""), n_ref=int(n_ref), ref_ml=ref_ml, tiles=tiles, tile=[tile_w, tile_h], step_mm=step, stats=stats)
 
 
-PAGE = r"""<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>CMB Schichtbetrachter __DATASET__</title>
+PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>CMB slice viewer __DATASET__</title>
 <style>
 body{margin:0;background:#111;color:#ddd;font:14px system-ui,sans-serif;display:grid;grid-template-columns:230px 1fr;height:100vh}
 #list{overflow:auto;border-right:1px solid #333;padding:6px}
@@ -174,19 +174,19 @@ details{display:inline-block;vertical-align:top}details summary{cursor:pointer;c
  #sel{font-size:14px;padding:5px;margin:2px 0}
 }
 </style></head><body>
-<div id="list"><input id="q" placeholder="Fall suchen"><div id="cases"></div></div>
+<div id="list"><input id="q" placeholder="search case"><div id="cases"></div></div>
 <div id="main">
 <select id="sel"></select>
 <div id="bar"><b id="title"></b><span id="cnt"></span><span style="flex:1"></span>
-<details id="tgd" open><summary>Modelle</summary><span id="toggles"></span></details>
-<details id="info"><summary>Was bedeuten die Modelle?</summary><div id="infotext"></div></details>
-<span class="hint">Mausrad / Pfeile: Schicht · Bild+Bild-: Fall · R: Referenz aus/an</span></div>
+<details id="tgd" open><summary>Models</summary><span id="toggles"></span></details>
+<details id="info"><summary>What do the models mean?</summary><div id="infotext"></div></details>
+<span class="hint">mouse wheel / arrows: slice · PgUp/PgDn: case · R: reference on/off</span></div>
 <div id="panels">
- <div class="panel"><div class="stack" id="left"><div class="cap">Referenz</div></div></div>
- <div class="panel"><div class="stack" id="right"><div class="cap">Modelle</div></div></div>
+ <div class="panel"><div class="stack" id="left"><div class="cap">Reference</div></div></div>
+ <div class="panel"><div class="stack" id="right"><div class="cap">Models</div></div></div>
 </div>
 <div id="foot"><span id="zlab"></span><input type="range" id="z" min="0" max="0" value="0"><span id="flags"></span>
-<div id="nav"><button id="prevc" title="voriger Fall">◀</button><button id="zm" title="Schicht hoch">▲</button><button id="zp" title="Schicht runter">▼</button><button id="nextc" title="naechster Fall">▶</button></div></div>
+<div id="nav"><button id="prevc" title="previous case">◀</button><button id="zm" title="slice up">▲</button><button id="zp" title="slice down">▼</button><button id="nextc" title="next case">▶</button></div></div>
 </div>
 <script>
 const DATA=__DATA__; const RUNS=__RUNS__; let cur=0, zi=0, showRef=true; const on={}; RUNS.forEach(r=>on[r.name]=!!r.on);
@@ -201,14 +201,14 @@ function fit(){const c=DATA[cur];const [tw,th]=c.tile;const ph=document.querySel
  const mobile=window.innerWidth<=900||window.innerHeight>window.innerWidth;const avail=window.innerHeight-document.getElementById('bar').offsetHeight-document.getElementById('sel').offsetHeight-document.getElementById('foot').offsetHeight-14;const s=mobile?Math.min(pw/tw,(avail/2)/th):Math.min(pw/tw,ph/th);[L,R].forEach(st=>{st.style.width=(tw*s)+'px';st.style.height=(th*s)+'px';});
  document.querySelectorAll('.stack img').forEach(im=>{im.style.width=(tw*s)+'px';im.style.height=(c.tiles.length*th*s)+'px';});place();}
 function place(){const c=DATA[cur];const [tw,th]=c.tile;const s=L.clientWidth/tw;document.querySelectorAll('.stack img').forEach(im=>{im.style.top=(-zi*th*s)+'px';});
- document.getElementById('zlab').textContent=(window.innerWidth<=900||window.innerHeight>window.innerWidth)?`${zi+1}/${c.tiles.length}`:`Schicht ${zi+1} / ${c.tiles.length} (z=${c.tiles[zi].z}, ${c.step_mm} mm)`;document.getElementById('z').value=zi;
- const t=c.tiles[zi];let f=`Referenz hier: ${t.ref}`;RUNS.forEach(r=>{if(t[r.name]&&on[r.name])f+=` · ${r.name}: gefunden ${t[r.name].detected}, verpasst ${t[r.name].missed}, Fehlalarm ${t[r.name].fp}`;});document.getElementById('flags').textContent=f;}
-let show=function(i){cur=i;const c=DATA[cur];L.innerHTML='<div class="cap">Referenz (gelb)</div>';R.innerHTML='<div class="cap">Modelle</div>';
+ document.getElementById('zlab').textContent=(window.innerWidth<=900||window.innerHeight>window.innerWidth)?`${zi+1}/${c.tiles.length}`:`slice ${zi+1} / ${c.tiles.length} (z=${c.tiles[zi].z}, ${c.step_mm} mm)`;document.getElementById('z').value=zi;
+ const t=c.tiles[zi];let f=`reference here: ${t.ref}`;RUNS.forEach(r=>{if(t[r.name]&&on[r.name])f+=` · ${r.name}: detected ${t[r.name].detected}, missed ${t[r.name].missed}, false positives ${t[r.name].fp}`;});document.getElementById('flags').textContent=f;}
+let show=function(i){cur=i;const c=DATA[cur];L.innerHTML='<div class="cap">Reference (yellow)</div>';R.innerHTML='<div class="cap">Models</div>';
  layer(L,`img/${c.id}.jpg`,'base');const rl=layer(L,`img/${c.id}_ref.png`,'ref');rl.style.display=showRef?'':'none';
  layer(R,`img/${c.id}.jpg`,'base');RUNS.forEach(r=>{const im=layer(R,`img/${c.id}_${r.name}.png`,'ov');im.dataset.run=r.name;im.style.display=on[r.name]?'':'none';});
  zi=Math.min(zi,c.tiles.length-1);const first=c.tiles.findIndex(t=>t.ref>0);if(first>=0&&arguments[1]!==false)zi=first;
  document.getElementById('z').max=c.tiles.length-1;document.getElementById('title').textContent=`${c.id} (${c.cohort})`;
- let cnt=`Referenz ${c.n_ref}${c.ref_ml!==undefined?` (${c.ref_ml.toFixed(3)} ml)`:''}`;RUNS.forEach(r=>{const s=c.stats[r.name];if(s)cnt+=` · ${r.name}: TP ${s.tp} FP ${s.fp} FN ${s.fn}${s.ml!==undefined?` (${s.ml.toFixed(3)} ml)`:''}`;});document.getElementById('cnt').textContent=cnt;
+ let cnt=`reference ${c.n_ref}${c.ref_ml!==undefined?` (${c.ref_ml.toFixed(3)} ml)`:''}`;RUNS.forEach(r=>{const s=c.stats[r.name];if(s)cnt+=` · ${r.name}: TP ${s.tp} FP ${s.fp} FN ${s.fn}${s.ml!==undefined?` (${s.ml.toFixed(3)} ml)`:''}`;});document.getElementById('cnt').textContent=cnt;
  buildList(document.getElementById('q').value);setTimeout(fit,30);};
 function step(d){const n=DATA[cur].tiles.length;zi=Math.max(0,Math.min(n-1,zi+d));place();}
 document.getElementById('panels').addEventListener('wheel',e=>{e.preventDefault();step(e.deltaY>0?1:-1);},{passive:false});
@@ -243,7 +243,7 @@ def main() -> None:
     ap.add_argument("--on", nargs="*", default=None, help="runs switched ON at start (default: the first run only)")
     ap.add_argument("--single-file", type=int, default=0, metavar="N", help="also write betrachter_einzeldatei.html with the N cases with most lesions embedded (0 = off, -1 = all)")
     ap.add_argument("--single-width", type=int, default=480); ap.add_argument("--single-quality", type=int, default=72)
-    ap.add_argument("--info", nargs="*", default=[], metavar="NAME=TEXT", help="one-line explanation per run, shown under 'Was bedeuten die Modelle?' and as tooltip")
+    ap.add_argument("--info", nargs="*", default=[], metavar="NAME=TEXT", help="one-line explanation per run, shown under 'What do the models mean?' and as tooltip")
     a = ap.parse_args()
     absolute = lambda p: p if os.path.isabs(p) else f"{ROOT}/{p}"
     runs = []
@@ -279,11 +279,11 @@ def main() -> None:
                 png = Image.open(f"{out}/img/{cid}_{name}.png"); png = png.resize((w1, int(round(png.height * scale))), Image.NEAREST)
                 buf = io.BytesIO(); png.save(buf, "PNG", optimize=True); uris[f"img/{cid}_{name}.png"] = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
             embedded.append(dict(c, tile=[w1, h1]))
-        single = PAGE.replace("__DATASET__", a.dataset + " (Einzeldatei)").replace("__DATA__", json.dumps(embedded)).replace("__RUNS__", runs_js)
+        single = PAGE.replace("__DATASET__", a.dataset + " (single file)").replace("__DATA__", json.dumps(embedded)).replace("__RUNS__", runs_js)
         single = single.replace("const DATA=", "const URIS=" + json.dumps(uris) + ";const DATA=").replace("im.src=src;", "im.src=URIS[src]||src;")
         path = f"{out}/betrachter_einzeldatei.html"; open(path, "w").write(single)
-        print(f"-> {path} ({len(embedded)} Faelle, {os.path.getsize(path) / 1e6:.1f} MB)")
-    print(f"-> {out}/betrachter.html ({len(data)} Faelle, {len(runs)} Modelle)")
+        print(f"-> {path} ({len(embedded)} cases, {os.path.getsize(path) / 1e6:.1f} MB)")
+    print(f"-> {out}/betrachter.html ({len(data)} cases, {len(runs)} models)")
 
 
 if __name__ == "__main__":

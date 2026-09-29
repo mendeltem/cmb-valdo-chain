@@ -1,5 +1,5 @@
 """Momeni/CSIRO SWI cohort (doi 10.25919/aegy-ny12; licence: non-commercial, attribution, NO redistribution) onto the
-training grid, as the first INDEPENDENT public test of the SWI model (ARBEIT.md 5ae, arm 3; 2026-09-28).
+training grid, as the first INDEPENDENT public test of the SWI model (WORKLOG.md 5ae, arm 3; 2026-09-28).
 
 Source: ~/data/extern/momeni-csiro-cmb/PublicDataShare_2020/rCMB_DefiniteSubject/*.nii.gz -- 57 SWI, skull-stripped,
 bias-corrected, histogram-matched by the authors, 0.94 x 0.94 x 1.75 mm, LPS; expert CMB LOCATIONS (no masks) in

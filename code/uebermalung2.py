@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""Gefaess-Uebermalung, zweite Fassung (Claude 19.09.2026, Nutzerfrage "kannst du die Uebermalung optimieren?").
+"""Vessel inpainting, second version (Claude 19 Sep 2026, user question "can you optimize the inpainting?").
 
-Befund davor (protokoll.md 19.09.): die MicrobleedNet-Uebermalung trifft 109 von 236 Referenz-CMB, 17 sind
-danach unsichtbar, und sie uebermalt 12-17 % des Hirns. Ursachen, am Quelltext gelesen
+Finding beforehand (protokoll.md 19 Sep): the MicrobleedNet inpainting hits 109 of 236 reference CMB, 17
+become invisible afterwards, and it paints over 12-17 % of the brain. Causes, read from the source
 (microbleednet/scripts/data_preparation.py::inpaint_vessels):
-  1. frangi(..., beta=20): beta steuert die Unterdrueckung runder Strukturen; bei 20 ist sie praktisch AUS,
-     ein runder dunkler Fleck (CMB) antwortet so stark wie ein Gefaess.
-  2. sigmas (0.5, 1.2, 0.2) in PIXELN: 0.45-mm- und 1.0-mm-Pixel bekommen verschiedene physische Skalen.
-  3. KMeans k=2 JE SCHICHT: es gibt in jeder Schicht einen "Gefaess-Cluster", auch wenn dort kein Gefaess ist.
-  4. Gerettet wird nur, was als Komponente rund UND solide ist (eccentricity < 0.9, solidity > 0.5) -- eine
-     CMB, die an einem Cluster klebt, ist das nicht mehr.
+  1. frangi(..., beta=20): beta controls the suppression of round structures; at 20 it is practically OFF,
+     a round dark spot (CMB) responds as strongly as a vessel.
+  2. sigmas (0.5, 1.2, 0.2) in PIXELS: 0.45 mm and 1.0 mm pixels get different physical scales.
+  3. KMeans k=2 PER SLICE: there is a "vessel cluster" in every slice, even where there is no vessel.
+  4. Only what is round AND solid as a component is rescued (eccentricity < 0.9, solidity > 0.5) -- a
+     CMB stuck to a cluster no longer qualifies.
 
-Hier, ohne jede Verwendung der Label:
-  a. Frangi mit beta=0.5 (runde Flecken werden unterdrueckt), Skalen in MILLIMETERN (0.5 / 1.0 / 1.5 mm).
-  b. EINE Schwelle je Volumen: das oberste ANTEIL (Vorgabe 3 %) der Gefaessantwort im Hirn -- nicht je Schicht.
-  c. Uebermalt wird eine Komponente (je Schicht, 8er) nur, wenn sie LANG UND DUENN ist:
-     Hauptachse >= LAENGE_MM (Vorgabe 8 mm) und eccentricity >= 0.95. Alles Kurze bleibt stehen -- eine CMB
-     (2-10 mm, rund) kann die Bedingung nicht erfuellen; ein quer getroffenes Gefaess (Punkt in der Schicht)
-     auch nicht, das bleibt als Verwechslungskandidat bewusst im Bild.
-  d. Auffuellen wie im Original (Nachbarschaftsmittel), invertieren 1 - Bild/Maximum, Hirnmaske aus dev/preproc.
+Here, without any use of the labels:
+  a. Frangi with beta=0.5 (round spots are suppressed), scales in MILLIMETRES (0.5 / 1.0 / 1.5 mm).
+  b. ONE threshold per volume: the top SHARE (default 3 %) of the vessel response in the brain -- not per slice.
+  c. A component (per slice, 8-connectivity) is only painted over if it is LONG AND THIN:
+     major axis >= LENGTH_MM (default 8 mm) and eccentricity >= 0.95. Anything short is left alone -- a CMB
+     (2-10 mm, round) cannot meet the condition; a vessel hit crosswise (a point in the slice) cannot
+     either, it deliberately stays in the image as a confusion candidate.
+  d. Filled in as in the original (neighbourhood mean), inverted 1 - image/maximum, brain mask from dev/preproc.
 
   python uebermalung2.py [--faelle sub-101 ...] [--anteil 0.03] [--laenge 8] [--ziel dev/preproc_u2] [--proc 4]
-  python uebermalung2.py --pruefen dev/preproc_u2     # Schadensbilanz gegen die Label (nur Summen)
+  python uebermalung2.py --pruefen dev/preproc_u2     # damage report against the labels (sums only)
 """
 import os, sys, json, glob, shutil, argparse
 import numpy as np, nibabel as nib
@@ -78,7 +78,7 @@ def fall(arg):
 
 
 def pruefen(ordner):
-    """Schadensbilanz wie im Protokoll 19.09.: Vergleich mit 1 - fast_restore/max (ohne Uebermalung)."""
+    """Damage report as in the protocol 19 Sep: comparison with 1 - fast_restore/max (without inpainting)."""
     inv = {x["id"]: x["kohorte"] for x in json.load(open(f"{ROOT}/dev/inventar.json"))}
     ko = {k: dict(faelle=0, anteil=[], cmb=0, beruehrt=0, halb=0, ganz=0, verlust=0, unsichtbar=0) for k in "123"}
     for d in sorted(glob.glob(f"{ordner}/sub-*")):
@@ -105,11 +105,11 @@ def pruefen(ordner):
     for k, K in ko.items():
         if not K["faelle"]:
             continue
-        print(f"Kohorte {k}: {K['faelle']} Faelle, uebermalt {100 * np.mean(K['anteil']):.1f} % des Hirns | CMB {K['cmb']}: "
-              f"beruehrt {K['beruehrt']}, >= halb {K['halb']}, ganz {K['ganz']}, Kontrast > 50 % weg {K['verlust']}, unsichtbar {K['unsichtbar']}")
+        print(f"Cohort {k}: {K['faelle']} cases, painted over {100 * np.mean(K['anteil']):.1f} % of the brain | CMB {K['cmb']}: "
+              f"touched {K['beruehrt']}, >= half {K['halb']}, whole {K['ganz']}, contrast > 50 % lost {K['verlust']}, invisible {K['unsichtbar']}")
         for g in ges:
             ges[g] += int(K[g])
-    print("gesamt:", ges)
+    print("total:", ges)
 
 
 def main():
@@ -128,7 +128,7 @@ def main():
     from multiprocessing import Pool
     with Pool(a.proc, maxtasksperchild=1) as pool:
         for sid, ant in pool.imap_unordered(fall, [(s, ziel, a.anteil, a.laenge) for s in ids]):
-            print(sid, "uebersprungen" if ant is None else f"Maske {100 * ant:.2f} % des Hirns", flush=True)
+            print(sid, "skipped" if ant is None else f"mask {100 * ant:.2f} % of the brain", flush=True)
     json.dump(dict(anteil=a.anteil, laenge_mm=a.laenge, sigmas_mm=[0.5, 1.0, 1.5], beta=0.5, eccentricity_min=0.95),
               open(f"{ziel}/einstellungen.json", "w"), indent=1)
 

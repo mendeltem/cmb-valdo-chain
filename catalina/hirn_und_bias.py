@@ -1,9 +1,9 @@
-"""Fehlende Hirnmasken mit HD-BET (CPU, env medizin) erzeugen und FSL-Biaskorrektur (fast -B) rechnen.
-Regel des Nutzers (04.09.): wenn Hirnmaske fehlt -> hd-bet und fslbias correction.
-Ausgabe (Symlink-frei, gerechnet):
-  <bids>/derivatives/brainmask/<id>/anat/<id><stamm>_desc-brain_mask.nii.gz   (nur wo Quelle keine hat)
-  <bids>/derivatives/biascorr/<id>/anat/<id><stamm>_desc-biascorr_T2starw.nii.gz  (hirnextrahiert + fast -B)
-Aufruf: python hirn_und_bias.py <mod> [--alle]   ohne --alle nur Faelle ohne Quell-Hirnmaske."""
+"""Generate missing brain masks with HD-BET (CPU, env medizin) and run FSL bias correction (fast -B).
+User rule (04 Sep): if brain mask is missing -> hd-bet and fsl bias correction.
+Output (symlink-free, computed):
+  <bids>/derivatives/brainmask/<id>/anat/<id><stamm>_desc-brain_mask.nii.gz   (only where the source has none)
+  <bids>/derivatives/biascorr/<id>/anat/<id><stamm>_desc-biascorr_T2starw.nii.gz  (brain-extracted + fast -B)
+Usage: python hirn_und_bias.py <mod> [--alle]   without --alle only cases without a source brain mask."""
 import os, sys, glob, subprocess, shutil, tempfile
 import numpy as np, nibabel as nib, pandas as pd
 Q = os.path.expanduser("~/data/sourcedata/catalina"); ZIEL = os.path.expanduser("~/data/bids")
@@ -30,5 +30,5 @@ for sid in tsv.participant_id:
         nib.save(nib.Nifti1Image(brain, ib.affine, ib.header), f"{t}/brain.nii.gz")
         subprocess.run([FAST, "-B", "--nopve", "-t", "2", "-o", f"{t}/fast", f"{t}/brain.nii.gz"], check=True, capture_output=True, env=FSLENV)
         os.makedirs(os.path.dirname(bias_z), exist_ok=True); shutil.copy(f"{t}/fast_restore.nii.gz", bias_z)
-    print(sid, "hirn:", "quelle" if hirn == hirn_q else "hd-bet", "bias: ok", flush=True)
-print("fertig", mod)
+    print(sid, "brain:", "source" if hirn == hirn_q else "hd-bet", "bias: ok", flush=True)
+print("done", mod)

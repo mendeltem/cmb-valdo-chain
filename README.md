@@ -1,16 +1,17 @@
-# cmb-valdo-chain — cerebral microbleed detection on T2*/SWI, built from MicrobleedNet by paired ablation
+# cmb-valdo-chain: cerebral microbleed detection on T2*/SWI, built from MicrobleedNet by paired ablation
 
-Ein 3D-U-Net-Detektor plus kohortenübergreifender 3D-CNN-Klassifikator für zerebrale Mikroblutungen (CMB), entstanden aus dem
-Nachbau von MicrobleedNet auf VALDO Task 2 und dem Austausch jedes Bausteins gegen eine gepaarte Messung. Läsions-F1 auf VALDO
-0,245 → 0,647; eigene Klinik-Kohorten (T2*, SWI) 0,67; fremde öffentliche SWI-Kohorte ohne Anpassung 0,61–0,65.
-Alle Zahlen, Regeln und Negativbefunde: `docs/ARBEIT.md` (Arbeitsdokument), `docs/UEBERSICHT-tests-0929.md` (alle Tests),
-`docs/MASTERARBEIT-KERN.md` (Kern), `docs/REPLIKATION.md` (wörtliche Befehle je Zahl). English summary below.
+A 3D U-Net detector plus a cross-cohort 3D-CNN candidate classifier for cerebral microbleeds (CMB). It grew out of a
+re-implementation of MicrobleedNet on VALDO Task 2 in which every building block was swapped against a paired measurement.
+Lesion-level F1 on VALDO 0.245 -> 0.647; in-house clinical cohorts (T2*, SWI) 0.67; an external public SWI cohort without any
+adaptation 0.61-0.65. All numbers, decision rules and negative findings: `docs/WORKLOG.md` (the working document),
+`docs/OVERVIEW-tests-2026-09-29.md` (every test), `docs/THESIS-CORE.md` (the core for the thesis), `docs/REPLICATION.md`
+(the literal command behind every number).
 
 ## What is in here
 | Folder | Content |
 |---|---|
 | `cmb/` | the English package: `transfer/` (grids, manifests, zero-shot, evaluation), `stage2/` (candidates, pooled classifier, apply mode), `analysis/` (operating point, ensembles, subject-level F1, candidate shape features, volumes), `review/` (QC pages, slice viewer), `synthesis/`, `baselines/` (MicrobleedNet fine-tune, nnU-Net v2), `experiments/kern.py` (the repeatable core runner) |
-| `code/` | training and grid building (German, grown during the study): `turnier.py` (all training switches), `cv5.py` (5-fold CV core), `netze.py` (architectures, winner `a03-aniso`), `frst.py`, `gitter_c_bauen.py` (0.5×0.5×1 mm grid), `preprocess.py` / `preproc_roh_bauen.py` (VALDO preprocessing), `split.py`, `we5.py --synthseg` (SynthSeg maps), `metric.py` |
+| `code/` | training and grid building (grown during the study; identifiers and flags keep their original German names, see the glossary below): `turnier.py` (all training switches), `cv5.py` (5-fold CV core), `netze.py` (architectures, winner `a03-aniso`), `frst.py`, `gitter_c_bauen.py` (0.5×0.5×1 mm grid), `preprocess.py` / `preproc_roh_bauen.py` (VALDO preprocessing), `split.py`, `we5.py --synthseg` (SynthSeg maps), `metric.py` |
 | `catalina/` | scripts for an in-house BIDS cohort: `hirn_und_bias.py` (HD-BET + FSL FAST -B once, written to `derivatives/`), `synthseg_swi.sh`, `mb_metrik.py`. No data, no identifiers. |
 | `dev/` | VALDO case list with the fixed 5-fold split (`cases.json`, `split.json`, seed 0), manifests, intensity landmarks |
 | `docs/` | working documents, literature, deviation table vs. MicrobleedNet, frozen environment (`environment/`), VALDO licence |
@@ -36,7 +37,7 @@ The code was written on one machine and uses absolute paths: `ROOT = /home/uchra
 ## Data
 **VALDO Task 2** (public, CC BY-NC-SA 4.0): download from https://zenodo.org/records/4520773, unpack to `~/data/extern/valdo2021/Task2/sub-XXX/`
 (`*_space-T2S_desc-masked_T2S.nii.gz`, `*_space-T2S_CMB.nii.gz`, T1/T2). Not redistributed here. 72 cases; 15 are held out
-(`dev/split.json`, touched once, see ARBEIT.md 5ad) and 57 are the CV cases.
+(`dev/split.json`, touched once, see WORKLOG.md 5ad) and 57 are the CV cases.
 
 **In-house cohort (catalina, never public)**: BIDS with `sub-XXX/anat/sub-XXX_T2starw.nii.gz` (or `_acq-swi_T2starw`), and derivatives:
 ```
@@ -85,7 +86,7 @@ python -m cmb.analysis.ensemble --runs ergebnisse/turnier/a03-aniso-e60-gd ergeb
 python -m cmb.analysis.operating_point --run ens2=ergebnisse/turnier/ens2-a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json --synthseg "dev/synthseg/{id}_synthseg.nii.gz"   # 0.647
 python -m cmb.stage2.candidates --predictions ergebnisse/turnier/a03-aniso-e60-gd --grid dev/gitter_d --keep-csf --out ergebnisse/stage2/a03-aniso-e60-gd-weich
 ```
-Every command of every reported number is in `docs/REPLIKATION.md`. GPU steps on the original machine went through a queue
+Every command of every reported number is in `docs/REPLICATION.md`. GPU steps on the original machine went through a queue
 (`grossauftrag --vram 20`); elsewhere run them directly. Trainings are deterministic per seed (a01 reproduces cv5-r3 to four digits).
 
 ## Reproduce (in-house cohort)
@@ -103,7 +104,22 @@ Deployment without private candidates: `python -m cmb.stage2.apply --source erge
 | in-house T2* / SWI, own U-Net + shared classifier | 0.671 / 0.672 (fine-tuned original on SWI: 0.406) |
 | external public SWI cohort (Momeni/CSIRO), no adaptation | 0.613 (VALDO U-Net + CSF rule), 0.630 (SWI U-Net + VALDO classifier) |
 What did NOT help (all measured, paired, pre-registered): loss functions, augmentation, longer training, patch size, intensity harmonisation,
-synthetic lesions, second-stage variants, hand-made vessel rules — see `docs/UEBERSICHT-tests-0929.md`.
+synthetic lesions, second-stage variants, hand-made vessel rules — see `docs/OVERVIEW-tests-2026-09-29.md`.
+
+## Glossary of the legacy identifiers
+The scripts in `code/` and `catalina/` were written during the study and keep their original German identifiers, because the exact
+commands that produced every reported number use them (`docs/REPLICATION.md`). Comments, help texts and messages are English.
+
+| identifier | meaning | identifier | meaning |
+|---|---|---|---|
+| `turnier.py`, `--netz` | training runner (tournament), network name | `gitter`, `--gitter` | grid (resampled volume set) |
+| `--epochen` | epochs | `falte`, `fold*` | cross-validation fold |
+| `bauen` (in file names) | build | `hirn`, `hirnmaske` | brain, brain mask |
+| `zusatz`, `--zusatz` | extra input channels (T1, T2) | `landmarken` | intensity landmarks |
+| `we5.py --synthseg` | SynthSeg tissue maps (step 5 of the original chain) | `uebermalung` | vessel inpainting |
+| `gewebekarte` | tissue map | `rangliste` | ranking table |
+| `kohorte`, `faelle` | cohort, cases | `eingaben` | inputs |
+| `ergebnisse/` | results | `dev/` | derived data (preprocessing, grids, manifests) |
 
 ## Licences
 Code: MIT (`LICENSE`). Weights: not in git; VALDO-trained weights CC BY-NC-SA 4.0 (`LICENSE-WEIGHTS.md`). VALDO data: CC BY-NC-SA 4.0, cite

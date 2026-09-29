@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""dev/preproc_roh (Claude 19.09.2026): dasselbe Eingangsbild wie dev/preproc, aber OHNE die
-Gefaess-Uebermalung der MicrobleedNet-Kette. Anlass (protokoll.md 19.09.): die Uebermalung trifft
-109 von 236 Referenz-CMB, 27 ganz, 17 sind danach unsichtbar.
+"""dev/preproc_roh (Claude 19 Sep 2026): the same input image as dev/preproc, but WITHOUT the
+vessel inpainting of the MicrobleedNet chain. Reason (protokoll.md 19 Sep): the inpainting hits
+109 of 236 reference CMBs, 27 completely, 17 are invisible afterward.
 
-Bild = 1 - fast_restore / max(fast_restore) innerhalb der Hirnmaske von dev/preproc (Bild > 0), sonst 0.
-Geprueft: an unbemalten Voxeln ist das identisch mit dev/preproc (Median-Abweichung 0.0000).
-Label wird kopiert. Danach:
+Image = 1 - fast_restore / max(fast_restore) inside the brain mask of dev/preproc (image > 0), else 0.
+Checked: at unpainted voxels this is identical to dev/preproc (median deviation 0.0000).
+Label is copied. Afterward:
   GITTER_C_QUELLE=dev/preproc_roh GITTER_C_ZIEL=dev/gitter_d python gitter_c_bauen.py
 """
 import os, sys, glob, shutil

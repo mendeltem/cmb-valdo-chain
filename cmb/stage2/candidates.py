@@ -77,10 +77,10 @@ def main() -> None:
     parser.add_argument("--out", help="output folder (default: ergebnisse/stage2/<run name>); REQUIRED to be private for private cohorts")
     parser.add_argument("--threshold", type=float, default=0.15)
     parser.add_argument("--min-mm3", type=float, default=1.0)
-    parser.add_argument("--tta", help="Ordner eines Spiegel-TTA-Laufs (cmb.analysis.tta_predict) zu DEMSELBEN Modell. Speichert je Kandidat "
-                             "zwei Felder: tta_probability und tta_delta = |TTA - gewoehnlich|. Gemessen 2026-09-23 auf den 278 VALDO-Kandidaten: "
-                             "echte Blutungen aendern sich unter Spiegelung um 0.014, Fehlalarme um 0.102 (Faktor 7); als Trennmerkmal AUC 0.711 "
-                             "-- besser als FRST (0.56) und Kontrast (0.65) und eine ANDERE Information als die Wahrscheinlichkeit selbst.")
+    parser.add_argument("--tta", help="Folder of a mirror-TTA run (cmb.analysis.tta_predict) for the SAME model. Stores two fields per candidate: "
+                             "tta_probability and tta_delta = |TTA - regular|. Measured 2026-09-23 on the 278 VALDO candidates: "
+                             "real microbleeds change by 0.014 under mirroring, false alarms by 0.102 (factor 7); as a discriminating feature AUC 0.711 "
+                             "-- better than FRST (0.56) and contrast (0.65), and DIFFERENT information than the probability itself.")
     parser.add_argument("--half", type=int, nargs=3, default=list(HALF), metavar=("X", "Y", "Z"),
                         help="half size of the stored patch in voxels; default 20 20 10 = 20 mm cube, 32 32 16 = 32 mm cube (two-scale CNN)")
     args = parser.parse_args()
@@ -114,7 +114,7 @@ def main() -> None:
         if args.tta:
             tta_pfad = f"{absolute(args.tta)}/fold{fold}/{case}_pred_proba.nii.gz"
             if not os.path.exists(tta_pfad):
-                raise SystemExit(f"TTA-Karte fehlt: {tta_pfad} -- erst cmb.analysis.tta_predict fuer diesen Lauf rechnen")
+                raise SystemExit(f"TTA map missing: {tta_pfad} -- first compute cmb.analysis.tta_predict for this run")
             tta = load(tta_pfad).astype(np.float32) / 255.0
 
         ref_labels, n_ref = ndimage.label(reference, structure=CONNECTIVITY_26)

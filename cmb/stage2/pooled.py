@@ -2,7 +2,7 @@
 
 "The U-Nets may differ per cohort or image, but the classifier should always see the same kind of result."
 Each cohort keeps its own first stage; the candidates of all cohorts are pooled, and ONE classifier is trained on the pool.
-Why this could work where cohort-wise second stages did not (ARBEIT.md 5d, 5j): the pool is several times larger
+Why this could work where cohort-wise second stages did not (WORKLOG.md 5d, 5j): the pool is several times larger
 (VALDO ~200 candidates, private T2* ~960, private SWI ~870), and the hand-made features are physical (mm, contrast,
 probability), so they should mean the same thing in every cohort.
 
@@ -80,9 +80,9 @@ def main() -> None:
     parser.add_argument("--tissue", action="store_true", help="add the modes that use the stored tissue label (hard CSF rule, tissue features)")
     parser.add_argument("--skip-own", action="store_true", help="skip the cohort-wise classifiers (saves GPU time for cnn)")
     parser.add_argument("--seed-offset", type=int, default=0,
-                        help="verschiebt ALLE Startwerte der zweiten Stufe. 0 = wie bisher (bitgleich). Fuer eine Messreihe: denselben Befehl "
-                             "mit 0..9 laufen lassen und die JSON-Dateien mit cmb.stage2.compare_repeats zusammenfassen -- der Fall-Bootstrap "
-                             "enthaelt das Trainingsrauschen der zweiten Stufe (~0.03) nicht, nur Wiederholungen zeigen es.")
+                        help="shifts ALL seeds of the second stage. 0 = as before (bit-identical). For a measurement series: run the same command "
+                             "with 0..9 and combine the JSON files with cmb.stage2.compare_repeats -- the case bootstrap "
+                             "does not contain the training noise of the second stage (~0.03), only repeats show it.")
     parser.add_argument("--transfer", default=None, metavar="SOURCE=TARGET,TARGET",
                         help="arm 4 (2026-09-28): CNN pre-trained on SOURCE cohort candidates, fine-tuned on each TARGET's training folds")
     parser.add_argument("--fractions", type=float, nargs="*", default=[0.0, 0.1, 0.25, 0.5, 1.0],
@@ -101,12 +101,12 @@ def main() -> None:
     import functools
     from cmb.stage2.classifier import fit_predict_cnn_transfer as _fit_transfer
     PATCH_MODELS = {"cnn": fit_predict_cnn, "cnn2s": fit_predict_cnn_two_scale,
-                    # Arm 5 Schritt 3 (29.09.2026): derselbe CNN, aber 32 mm entlang z (16 mm in der Schicht) -- braucht Kandidaten mit --half 20 20 20
+                    # Arm 5 step 3 (29 Sep 2026): the same CNN, but 32 mm along z (16 mm within the slice) -- needs candidates with --half 20 20 20
                     "cnn-z32": functools.partial(fit_predict_cnn, crop=(32, 32, 32)),
-                    # selbstueberwachtes Vortraining des Encoders auf den EIGENEN Ausschnitten, ohne Etiketten
+                    # self-supervised pretraining of the encoder on its OWN patches, without labels
                     "cnn-vor": fit_predict_cnn_pretrained,
                     "cnn-vor20": functools.partial(fit_predict_cnn_pretrained, pretrain_epochs=20),
-                    # Lehrer-Schueler: der Schueler bekommt die Vorhersagen der inneren Falten als weiche Ziele
+                    # teacher-student: the student gets the predictions of the inner folds as soft targets
                     "cnn-ts": fit_predict_cnn,
                     "cnn-ts03": functools.partial(fit_predict_cnn, alpha=0.3),
                     "cnn-ts07": functools.partial(fit_predict_cnn, alpha=0.7)}
@@ -165,9 +165,9 @@ def main() -> None:
                     held = fold[train] == j
                     inner[held] = fit_predict(inputs[train[~held]], y[train[~held]], inputs[train[held]], seed=k * 10 + j + 1000 * args.seed_offset)
                 test = np.nonzero(np.isin(cohort, group) & ~extra & (fold == k))[0]
-                # Lehrer-Schueler: `inner` sind die Vorhersagen der INNEREN Falten auf genau diesen Trainingskandidaten,
-                # also ehrliche Lehrer-Wahrscheinlichkeiten ausserhalb der jeweiligen Falte -- sie kosten nichts extra,
-                # die geschachtelte Auswertung rechnet sie ohnehin fuer die Schwellenwahl.
+                # teacher-student: `inner` are the predictions of the INNER folds on exactly these training candidates,
+                # i.e. honest teacher probabilities outside the respective fold -- they cost nothing extra,
+                # the nested evaluation computes them anyway for the threshold choice.
                 zusatz = dict(soft=inner) if destillieren else {}
                 test_scores = fit_predict(inputs[train], y[train], inputs[test], seed=k + 1000 * args.seed_offset, **zusatz)
                 for name in group:                           # threshold from THIS cohort's own (non-extra) training candidates

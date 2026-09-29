@@ -1,6 +1,6 @@
 """How much lesion contrast is lost by resampling to the training grid?
 
-Finding of 2026-09-19 (ARBEIT.md 4.8): label volume survives the resampling, lesion contrast does not. Measured per
+Finding of 2026-09-19 (WORKLOG.md 4.8): label volume survives the resampling, lesion contrast does not. Measured per
 reference lesion (26-connected component), before (native grid, e.g. dev/preproc_roh) and after (training grid):
   contrast       = mean inside the lesion - mean in a ring around it      (inverted image: lesions are bright)
   ring           = voxels of the SAME slices whose in-plane distance to the lesion is > 0.5 mm and <= 2.0 mm, inside the

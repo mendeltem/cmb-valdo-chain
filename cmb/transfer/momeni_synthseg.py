@@ -1,5 +1,5 @@
 """SynthSeg (--robust, as for the private SWI cohort) for the Momeni/CSIRO cases, resampled onto the training grid, so the
-CSF rule and the tissue-aware tools can be applied there too (ARBEIT.md 5ae, arm 3; 2026-09-28).
+CSF rule and the tissue-aware tools can be applied there too (WORKLOG.md 5ae, arm 3; 2026-09-28).
 
 Input: the authors' skull-stripped, bias-corrected SWI (native, NOT the inverted grid image). Output:
 <extern>/synthseg/native/<id>_synthseg.nii.gz (SynthSeg output) and <extern>/synthseg/<id>_synthseg.nii.gz (nearest-neighbour

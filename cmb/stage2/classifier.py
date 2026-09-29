@@ -85,9 +85,9 @@ def features_of(patch: np.ndarray, row: Dict, threshold: float) -> List[float]:
     return [row["probability"], float(prob[core].mean()), float(np.log(row["voxels"])), float(frst[core].max()),
             contrast, extent_in_plane, extent_through, max(extent_in_plane, extent_through) / max(min(extent_in_plane, extent_through), 0.5),
             row["voxels"] / max(dz * dy * dx, 1), float((image == 0).mean()),
-            # Stabilitaet unter Spiegelung: echte Blutungen aendern sich kaum, Fehlalarme stark (Faktor 7; AUC 0.711,
-            # gemessen 2026-09-23). Fehlt die TTA-Karte, stehen hier Nullen -- dann traegt das Merkmal nichts bei,
-            # statt den Aufruf scheitern zu lassen.
+            # Stability under mirroring: real microbleeds change hardly at all, false alarms strongly (factor 7; AUC 0.711,
+            # measured 2026-09-23). If the TTA map is missing, this is zero here -- then the feature contributes nothing,
+            # instead of letting the call fail.
             float(row.get("tta_probability", 0.0)), float(row.get("tta_delta", 0.0))]
 
 
@@ -237,13 +237,13 @@ def fit_predict_cnn_pretrained(train_x, train_y, test_x, seed=0, epochs=40, pret
     optimiser = torch.optim.AdamW(list(enc.parameters()) + list(dec.parameters()), lr=1e-3, weight_decay=1e-4)
     schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=max(pretrain_epochs, 1))
     verlust = nn.MSELoss()
-    for _ in range(pretrain_epochs):                                    # ---- 1) ohne Etiketten: Luecken fuellen
+    for _ in range(pretrain_epochs):                                    # ---- 1) without labels: fill gaps
         enc.train(); dec.train()
         order = rng.permutation(len(train_x))
         for start in range(0, len(order), 16):
             idx = order[start:start + 16]
             ziel = []
-            for i in idx:                                               # gleicher Versatz und gleiche Spiegelungen wie beim Klassifizieren
+            for i in idx:                                               # same offset and same mirroring as during classification
                 shift = [b - j + rng.randint(0, 2 * j + 1) for b, j in zip(base, JITTER)]
                 p = train_x[i][:, shift[0]:shift[0] + CROP[0], shift[1]:shift[1] + CROP[1], shift[2]:shift[2] + CROP[2]]
                 for axis in (1, 2, 3):
@@ -258,7 +258,7 @@ def fit_predict_cnn_pretrained(train_x, train_y, test_x, seed=0, epochs=40, pret
         schedule.step()
     vortrainiert = {k: v.detach().clone() for k, v in enc.state_dict().items()}
 
-    scores = np.zeros(len(test_x), np.float32)                          # ---- 2) mit Etiketten: fein abstimmen
+    scores = np.zeros(len(test_x), np.float32)                          # ---- 2) with labels: fine-tune
     test = torch.from_numpy(np.ascontiguousarray(centre_crop(test_x), dtype=np.float32)).to(device)
     for member in range(3):
         torch.manual_seed(seed * 10 + member); rng = np.random.RandomState(seed * 10 + member)
@@ -447,7 +447,7 @@ if __name__ == "__main__":
 def fit_predict_cnn_transfer(source_x, source_y, finetune_x, finetune_y, test_x, seed=0, epochs=40, finetune_epochs=20,
                              finetune_lr=3e-4, cache=None):
     """The plain CNN (same layers, crop, jitter, flips and three averaged members as ``fit_predict_cnn``), but trained in
-    two steps (user idea 2026-09-28, ARBEIT.md 5ae arm 4): PRE-TRAINED on the candidates of a source cohort (VALDO, public),
+    two steps (user idea 2026-09-28, WORKLOG.md 5ae arm 4): PRE-TRAINED on the candidates of a source cohort (VALDO, public),
     then FINE-TUNED on the candidates of the target cohort with a smaller learning rate. With an empty fine-tuning set the
     pre-trained network is used as is (zero-shot transfer of the classifier). Why: the pooled classifier needs the private
     candidates at training time and cannot be published; this recipe can -- U-Net and classifier trained on VALDO,

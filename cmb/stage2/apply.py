@@ -1,4 +1,4 @@
-"""Apply the VALDO-only second stage to the candidates of ANOTHER cohort (deployment mode; ARBEIT.md 5ae arm 4, 2026-09-29).
+"""Apply the VALDO-only second stage to the candidates of ANOTHER cohort (deployment mode; WORKLOG.md 5ae arm 4, 2026-09-29).
 
 The pooled classifier (cmb.stage2.pooled) needs the private candidates at training time. Arm 4 showed that a classifier
 trained on VALDO candidates alone transfers zero-shot (catalina-SWI 0.671 vs 0.672 pooled). This is the tool that does

@@ -1,19 +1,19 @@
-"""Detektionsmetrik fuer Mikroblutungen: Komponenten bei 26er-Nachbarschaft.
+"""Detection metric for microbleeds: components with 26-neighbourhood connectivity.
 
-Je Fall:  TP = Referenzkomponenten, die von >=1 Vorhersagekomponente beruehrt werden
-          FN = Referenzkomponenten ohne Beruehrung
-          FP = Vorhersagekomponenten, die keine Referenzkomponente beruehren
-          (mehrere Vorhersagen auf einer Referenz zaehlen 1 TP und 0 FP)
-Fallebene: positiv = mindestens eine Komponente -> TP/FP/TN/FN je Fall (TN gibt es nur hier).
-Gesamt:   gepoolt ueber alle Faelle (Summen), F1 = 2TP/(2TP+FP+FN); dazu FP je Fall und
-          mittlerer Zaehlfehler |n_vorhersage - n_referenz|.
+Per case:  TP = reference components touched by >=1 prediction component
+           FN = reference components without a touch
+           FP = prediction components that touch no reference component
+           (several predictions on one reference count as 1 TP and 0 FP)
+Case level: positive = at least one component -> TP/FP/TN/FN per case (TN only exists here).
+Total:    pooled over all cases (sums), F1 = 2TP/(2TP+FP+FN); plus FP per case and
+          mean count error |n_pred - n_ref|.
 
-Bibliothek:  from mb_metrik import treffer;  treffer(ref_bool, pred_bool) -> dict
-Aufruf:      python mb_metrik.py --netz <ordner> --mod swi|t2star [--faelle faelle.json]
-             erwartet <ordner>/fold<k>/<id>_pred.nii.gz (binaer, Bildgitter), jeder Fall genau
-             einmal (in seiner Testfalte); schreibt <ordner>/ergebnis.csv (je Fall, bleibt lokal)
-             und <ordner>/zusammenfassung.json (nur Summen, veroeffentlichbar).
-             python mb_metrik.py --selbsttest   prueft die Logik an synthetischen Masken."""
+Library:  from mb_metrik import treffer;  treffer(ref_bool, pred_bool) -> dict
+Call:     python mb_metrik.py --netz <folder> --mod swi|t2star [--faelle faelle.json]
+          expects <folder>/fold<k>/<id>_pred.nii.gz (binary, image grid), each case exactly
+          once (in its test fold); writes <folder>/ergebnis.csv (per case, stays local)
+          and <folder>/zusammenfassung.json (sums only, publishable).
+          python mb_metrik.py --selbsttest   checks the logic on synthetic masks."""
 import os, sys, glob, json, argparse
 import numpy as np
 from scipy import ndimage
@@ -24,7 +24,7 @@ def treffer(ref, pred):
     ref = np.asarray(ref) > 0; pred = np.asarray(pred) > 0
     lr, nr = ndimage.label(ref, structure=N26)
     lp, npred = ndimage.label(pred, structure=N26)
-    # Beruehrung = Voxelueberlappung der Komponenten
+    # touch = voxel overlap of the components
     ref_getroffen = np.zeros(nr + 1, bool); pred_getroffen = np.zeros(npred + 1, bool)
     beide = ref & pred
     if beide.any():
@@ -51,10 +51,10 @@ def selbsttest():
         z, y, x = np.ogrid[:a.shape[0], :a.shape[1], :a.shape[2]]
         a[((z-c[0])**2 + (y-c[1])**2 + (x-c[2])**2) <= r*r] = 1
     ref = np.zeros((40, 40, 40), np.uint8); pred = np.zeros_like(ref)
-    kugel(ref, (10, 10, 10), 3); kugel(ref, (25, 25, 25), 2); kugel(ref, (30, 8, 30), 2)   # 3 Referenzen
-    kugel(pred, (10, 10, 10), 2); kugel(pred, (11, 13, 10), 1)   # zwei Vorhersagen auf Referenz 1 -> 1 TP, 0 FP
-    kugel(pred, (25, 25, 25), 3)                                  # Referenz 2 getroffen
-    pred[5, 35, 5] = 1; pred[6, 36, 6] = 1                        # nur diagonal verbunden: EIN FP bei 26er
+    kugel(ref, (10, 10, 10), 3); kugel(ref, (25, 25, 25), 2); kugel(ref, (30, 8, 30), 2)   # 3 references
+    kugel(pred, (10, 10, 10), 2); kugel(pred, (11, 13, 10), 1)   # two predictions on reference 1 -> 1 TP, 0 FP
+    kugel(pred, (25, 25, 25), 3)                                  # reference 2 touched
+    pred[5, 35, 5] = 1; pred[6, 36, 6] = 1                        # only diagonally connected: ONE FP at 26-connectivity
     t = treffer(ref, pred)
     soll = dict(n_ref=3, n_pred=3, tp=2, fp=1, fn=1, fall_ref=1, fall_pred=1, zaehlfehler=0)
     assert t == soll, (t, soll)
@@ -63,7 +63,7 @@ def selbsttest():
     z = zusammenfassen([t, leer, treffer(np.zeros((5, 5, 5)), pred[:5, :5, :5] * 0 + 1)])
     assert z["tp"] == 2 and z["fp"] == 2 and z["fn"] == 1 and z["fall_ebene"] == dict(tp=1, fp=1, tn=1, fn=0), z
     assert abs(z["f1"] - 4 / 7) < 1e-3, z["f1"]
-    print("Selbsttest bestanden:", t, "| gesamt:", z)
+    print("Self-test passed:", t, "| total:", z)
 
 def auswerten(netz, mod, faelle_pfad):
     import nibabel as nib, csv
@@ -74,15 +74,15 @@ def auswerten(netz, mod, faelle_pfad):
         if not preds: fehlend.append(f["id"]); continue
         if len(preds) > 1: doppelt.append(f["id"])
         p = preds[0]; erwartet = f"{netz}/fold{f['fold']}/{f['id']}_pred.nii.gz"
-        if p != erwartet: doppelt.append(f["id"] + " (falsche Falte)")
+        if p != erwartet: doppelt.append(f["id"] + " (wrong fold)")
         ir, ip = nib.load(f["maske"]), nib.load(p)
         if ir.shape[:3] != ip.shape[:3]:
-            raise SystemExit(f"{f['id']}: Vorhersage {ip.shape[:3]} nicht auf Bildgitter {ir.shape[:3]}")
+            raise SystemExit(f"{f['id']}: prediction {ip.shape[:3]} not on image grid {ir.shape[:3]}")
         t = treffer(np.asarray(ir.dataobj), np.asarray(ip.dataobj))
         zeilen.append(dict(id=f["id"], fold=f["fold"], klasse=f["klasse"], **t))
     if fehlend or doppelt:
-        print(f"WARNUNG: {len(fehlend)} Faelle ohne Vorhersage, {len(doppelt)} doppelt/falsche Falte:", doppelt[:5])
-    if not zeilen: raise SystemExit("keine Vorhersagen gefunden")
+        print(f"WARNING: {len(fehlend)} cases without a prediction, {len(doppelt)} duplicate/wrong fold:", doppelt[:5])
+    if not zeilen: raise SystemExit("no predictions found")
     with open(f"{netz}/ergebnis.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(zeilen[0])); w.writeheader(); w.writerows(zeilen)
     z = zusammenfassen(zeilen); z["netz"] = os.path.basename(netz.rstrip("/")); z["modalitaet"] = mod

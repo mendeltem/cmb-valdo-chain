@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""we3: AttentionUNet3D mit suchbarer Architektur (in_channels, Tiefe, Gates optional).
+"""we3: AttentionUNet3D with searchable architecture (in_channels, depth, gates optional).
 
-Umbau aus einem frueheren Projektstand (versuche/attention-unet/attention_unet.py), Original dort
-UNANGEFASST. Regeln:
-  - in_channels Parameter (1 oder 2), nicht hart verdrahtet
-  - Tiefe als Kanalliste: [b,2b,4b] = 3 Ebenen, [b,2b,4b,8b] = 4, [b,2b,4b,8b,16b] = 5
-  - Attention-Gates abschaltbar (gates=False -> reines U-Net)
-  - Fix 09.09. bleibt: Gate g und Skip x haben auf derselben Stufe GLEICH viele Kanaele.
-  - Tiefe 4, basis 32, gates an, 1 Kanal MUSS dieselbe Parameterzahl wie das
-    Original (2 Kanaele) liefern -- der einzige Unterschied ist das Eingangskonv.
+Rebuilt from an earlier project state (versuche/attention-unet/attention_unet.py), original there
+UNTOUCHED. Rules:
+  - in_channels parameter (1 or 2), not hardwired
+  - depth as a channel list: [b,2b,4b] = 3 levels, [b,2b,4b,8b] = 4, [b,2b,4b,8b,16b] = 5
+  - attention gates switchable off (gates=False -> plain U-Net)
+  - fix 9 Sep stays: gate g and skip x have the SAME number of channels at the same stage.
+  - depth 4, basis 32, gates on, 1 channel MUST yield the same parameter count as the
+    original (2 channels) -- the only difference is the input conv.
 
-Normierung (Claude 11.09.): norm="batch" (Vorgabe, wie bisher -- alte Modelle laden
-unveraendert) oder "instance" (InstanceNorm3d affine; unabhaengig von der Stapelgroesse 4
-und davon, dass Trainingsstapel zu 60 % Laesions-Patches sind, die Inferenzkacheln aber
-nicht). Im Gate psi bei "instance" keine Norm, nur Conv mit Bias -> Sigmoid.
+Normalization (Claude 11 Sep): norm="batch" (default, as before -- old models load
+unchanged) or "instance" (InstanceNorm3d affine; independent of the batch size 4
+and of the fact that training batches are 60% lesion patches, but the inference
+tiles are not). In the gate psi with "instance" there is no norm, just conv with bias -> sigmoid.
 
-Achsenkonvention (z, y, x) = NIfTI (D, H, W). Padding auf Vielfache von 2^tiefe
-im forward, zurueckschneiden danach (wie im Original).
+Axis convention (z, y, x) = NIfTI (D, H, W). Padding to multiples of 2^tiefe
+in forward, cropped back afterward (as in the original).
 """
 import torch
 import torch.nn as nn
@@ -63,20 +63,20 @@ class Block(nn.Module):
 
 
 def kanalliste(basis, tiefe):
-    """[b, 2b, 4b, ...] mit 'tiefe' Eintraegen (tiefe 3/4/5)."""
+    """[b, 2b, 4b, ...] with 'tiefe' entries (tiefe 3/4/5)."""
     return [basis * 2 ** i for i in range(tiefe)]
 
 
 class AttentionUNet3D(nn.Module):
-    """Eingang (B, in_channels, D, H, W) -> Logits (B, 1, D, H, W).
+    """Input (B, in_channels, D, H, W) -> logits (B, 1, D, H, W).
 
-    D, H, W werden auf das naechste Vielfache von 2**tiefe gepadded.
+    D, H, W are padded to the next multiple of 2**tiefe.
     """
     def __init__(self, in_channels=1, basis=32, tiefe=4, gates=True, dropout=0.0, norm="batch"):
         super().__init__()
-        assert tiefe in (3, 4, 5), f"tiefe {tiefe} nicht erlaubt (3/4/5)"
-        ch = kanalliste(basis, tiefe)          # Encoder-Kanaele je Stufe
-        m = ch[-1] * 2                          # Mitte (Original: Block(b*8, b*16))
+        assert tiefe in (3, 4, 5), f"tiefe {tiefe} not allowed (3/4/5)"
+        ch = kanalliste(basis, tiefe)          # encoder channels per stage
+        m = ch[-1] * 2                          # middle (original: Block(b*8, b*16))
         self.e = nn.ModuleList([Block(in_channels, ch[0], dropout, norm)] +
                                [Block(ch[i], ch[i + 1], dropout, norm) for i in range(tiefe - 1)])
         self.mitte = Block(ch[-1], m, dropout, norm)
@@ -86,7 +86,7 @@ class AttentionUNet3D(nn.Module):
         self.d = nn.ModuleList([Block(m, ch[-1], dropout, norm)] +
                                [Block(ch[i + 1], ch[i], dropout, norm) for i in range(tiefe - 2, -1, -1)])
         if gates:
-            # Fix 09.09.: g (hochgetastet) und x (Skip) haben gleich viele Kanaele.
+            # Fix 9 Sep: g (upsampled) and x (skip) have the same number of channels.
             self.ag = nn.ModuleList([AttentionGate3D(c, c, norm=norm) for c in reversed(ch)])
         else:
             self.ag = None

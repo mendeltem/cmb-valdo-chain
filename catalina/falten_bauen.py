@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""wb2 Schritt 1: 5-Fach-CV-Falten aus eingaben/swi/preproc2 bauen (Symlinks).
+"""wb2 step 1: build 5-fold CV folds from eingaben/swi/preproc2 (symlinks).
 
-Je Falte k: eingaben/swi/falten/fold{k}/{images,labels,frsts}/
-  images:  alle 61 Faelle (Train+Test zusammen -- fine_tune trennt mit --test_ids)
-  labels:  alle 61 Faelle
-  frsts:   alle 61 Faelle
-  test_ids.txt: die Testfaelle der Falte (eine ID pro Zeile)
-Summe der Testfaelle ueber die Falten muss 61 sein (jeder Fall genau einmal).
+Per fold k: eingaben/swi/falten/fold{k}/{images,labels,frsts}/
+  images:  all 61 cases (train+test together -- fine_tune separates with --test_ids)
+  labels:  all 61 cases
+  frsts:   all 61 cases
+  test_ids.txt: the test cases of the fold (one ID per line)
+Sum of the test cases over the folds must be 61 (every case exactly once).
 """
 import json, os
 
@@ -35,19 +35,19 @@ for k in range(5):
             if os.path.islink(dst) or os.path.exists(dst):
                 os.remove(dst)
             if not os.path.exists(src):
-                raise SystemExit(f"Quelle fehlt: {src}")
+                raise SystemExit(f"source missing: {src}")
             os.symlink(os.path.abspath(src), dst)
     with open(f"{fold}/test_ids.txt", "w") as f:
         f.write("\n".join(test_ids) + "\n")
     n_img = len(os.listdir(f"{fold}/images"))
     n_lab = len(os.listdir(f"{fold}/labels"))
     n_frs = len(os.listdir(f"{fold}/frsts"))
-    print(f"fold{k}: {len(test_ids)} Testfaelle, {n_img} images, {n_lab} labels, {n_frs} frsts")
+    print(f"fold{k}: {len(test_ids)} test cases, {n_img} images, {n_lab} labels, {n_frs} frsts")
     if not (n_img == n_lab == n_frs == 61):
-        raise SystemExit(f"fold{k}: Erwartet 61/61/61, ist {n_img}/{n_lab}/{n_frs}")
+        raise SystemExit(f"fold{k}: expected 61/61/61, got {n_img}/{n_lab}/{n_frs}")
     gesamt_test += len(test_ids)
 
-print(f"Summe Testfaelle ueber alle Falten: {gesamt_test}")
+print(f"sum of test cases over all folds: {gesamt_test}")
 if gesamt_test != 61:
-    raise SystemExit(f"Summe Testfaelle {gesamt_test} != 61")
-print("OK: 5 Falten gebaut.")
+    raise SystemExit(f"sum of test cases {gesamt_test} != 61")
+print("OK: 5 folds built.")

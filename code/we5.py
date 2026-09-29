@@ -1,43 +1,43 @@
 #!/usr/bin/env python3
-"""we5: Nachbearbeitung (26er-Filter in mm3 + FP-Filter ueber T1-SynthSeg) und EINMALIGE
-Validierungsmessung auf dem Validierungsset von we4 (VALDO Task 2, T2*).
+"""we5: post-processing (26-connectivity filter in mm3 + FP filter via T1 SynthSeg) and ONE-TIME
+validation measurement on the validation set from we4 (VALDO Task 2, T2*).
 
-Harte Regeln (Auftrag + Abnahme 11.09.):
-  - Alle Filterparameter werden VORHER auf den CV-Falten (57 Faellen) festgelegt und
-    eingefroren in dev/filterkette.json. Das Validierungsset (15 Faelle) wird danach
-    genau EINMAL beruehrt. Wer danach noch am Filter dreht, hat das Set verbrannt.
-  - Groessenfilter in mm3 (Voxel x pixdim, je Fall) -- ein Voxel-Schwellenwert waere
-    kohortenabhaengig (Kohorten haben sehr verschiedene Voxelvolumina).
-  - FP-Filter ueber T1: mri_synthseg auf sub-XXX_space-T2S_desc-masked_T1.nii.gz.
-    KEINE Registrierung -- der T1 liegt im T2S-Raum (72/72 geprueft, Vertrag we1).
-    ABER: der T1 liegt im ORIGINAL-T2S-Grid, NICHT im Gitter-C-Raum der Vorhersagen
-    (0.5x0.5x1.0 mm, zugeschnitten). Der SynthSeg-Label wird daher mit naechster
-    Nachbarschaft (kein Interpolation, Label bleibt diskret) auf das Gitter-C-Raster
-    umgerechnet -- eine Rasterumrechnung, keine Registrierung.
-    Zwei Varianten, getrennt gemessen, jede mit TP-Verlust:
-      V1 Ventrikel:  Labels 4,12,13,22,23 (lat./infer. lat. Ventrikel li/re, 3., 4.)
-      V2 +CSF:       V1 + Label 17 (freier CSF)
-    (Labeltabelle aus mri_synthseg --vol-CSV, 33 Strukturen, geprueft an sub-201;
-    wd6-Vergleichswert: SWI-Kohorte, dort CSF-Variante kostete 12 TP -- hier neu messen.)
-  - Stufen nur behalten, wenn sie auf der CV (gepoolt, 57 Faelle) F1 verbessern.
-  - Validierung: EINMAL, bestes Modell aus we4 = Konf r3, 5 Falten-Modelle, je mit der
-    out-of-fold-Schwelle und out-of-fold-Voxel-Mindestgroesse; Mehrheitsvotum (>=3 von 5).
-  - Referenz = gitter_c-Label (26er-Komponenten), exakt wie we4 gemessen (label_for).
-  - Zahlen als Mittel+-Std, nie Median. Gemessen/interpretiert getrennt.
+Hard rules (task + sign-off 11 Sep):
+  - All filter parameters are fixed BEFOREHAND on the CV folds (57 cases) and
+    frozen into dev/filterkette.json. The validation set (15 cases) is touched
+    exactly ONCE after that. Whoever still tunes the filter afterward has burned the set.
+  - Size filter in mm3 (voxel x pixdim, per case) -- a voxel threshold would be
+    cohort-dependent (cohorts have very different voxel volumes).
+  - FP filter via T1: mri_synthseg on sub-XXX_space-T2S_desc-masked_T1.nii.gz.
+    NO registration -- the T1 is in T2S space (72/72 checked, we1 contract).
+    BUT: the T1 is on the ORIGINAL T2S grid, NOT in the Grid-C space of the
+    predictions (0.5x0.5x1.0 mm, cropped). The SynthSeg label is therefore
+    converted to the Grid-C raster with nearest neighbour (no interpolation, label
+    stays discrete) -- a grid conversion, not a registration.
+    Two variants, measured separately, each with TP loss:
+      V1 ventricle:  labels 4,12,13,22,23 (lat./infer. lat. ventricle l/r, 3rd, 4th)
+      V2 +CSF:       V1 + label 17 (free CSF)
+    (label table from mri_synthseg --vol-CSV, 33 structures, checked on sub-201;
+    wd6 comparison value: SWI cohort, there the CSF variant cost 12 TP -- measure fresh here.)
+  - Stages are only kept if they improve F1 on the CV (pooled, 57 cases).
+  - Validation: ONCE, best model from we4 = config r3, 5 fold models, each with its
+    out-of-fold threshold and out-of-fold minimum voxel size; majority vote (>=3 of 5).
+  - Reference = gitter_c label (26-connectivity components), measured exactly like we4 (label_for).
+  - Numbers as mean +- std, never median. Measurement and interpretation kept separate.
 
-Aufruf:
-  python we5.py --probe             # 2 Faelle: 1 CV + 1 Val durch ALLE Stufen, Zeit messen
-  python we5.py --synthseg [ids]    # mri_synthseg (CPU, parallel) + Resample auf Gitter-C
-  python we5.py --cv                # Filterabstimmung auf 57 CV-Vorhersagen ->
-                                    # dev/filterkette.json (EINFRIEREN)
-  python we5.py --validierung       # EINMALIG: 15 Val-Faelle -> ergebnisse/validierung/
-                                    # summary.json (mit filterkette_sha256)
+Call:
+  python we5.py --probe             # 2 cases: 1 CV + 1 val through ALL stages, time it
+  python we5.py --synthseg [ids]    # mri_synthseg (CPU, parallel) + resample onto Grid C
+  python we5.py --cv                # filter tuning on 57 CV predictions ->
+                                    # dev/filterkette.json (FREEZE)
+  python we5.py --validierung       # ONE-TIME: 15 val cases -> ergebnisse/validierung/
+                                    # summary.json (with filterkette_sha256)
 
-Dateien:
-  dev/synthseg/<id>_synthseg.nii.gz           SynthSeg im Gitter-C-Raum (resampled)
-  dev/filterkette.json                        eingefrorene Kette (vor der Validierung!)
-  ergebnisse/validierung/<id>_pred.nii.gz     Vorhersage je Val-Fall (genau eine)
-  ergebnisse/validierung/summary.json         Validierungszahlen + CV daneben
+Files:
+  dev/synthseg/<id>_synthseg.nii.gz           SynthSeg in Grid-C space (resampled)
+  dev/filterkette.json                        frozen chain (before the validation!)
+  ergebnisse/validierung/<id>_pred.nii.gz     prediction per val case (exactly one)
+  ergebnisse/validierung/summary.json         validation numbers + CV alongside
 """
 import os, sys, json, time, hashlib, argparse, subprocess, glob, shutil
 import numpy as np
@@ -48,21 +48,21 @@ ROOT = "/home/uchralt/data/work/valdo-t2s"
 EXTERN = "/home/uchralt/data/extern/valdo2021/Task2"
 N26 = np.ones((3, 3, 3), dtype=bool)
 FS = "/home/uchralt/freesurfer/8.2.0/bin/mri_synthseg"
-V1_VENTRIKEL = {4, 12, 13, 22, 23}          # lat./infer. lat. V. (li/re), 3., 4. Ventrikel
-V2_CSF = V1_VENTRIKEL | {17}                 # + freier CSF
-MAX_KOMP_VOX = 2100                            # Klumpen-Waechter aus we4 (in Voxel)
-MM3_GRID = (1, 2, 3, 5, 8, 12, 20, 30, 50)    # Groessenfilter in mm3 (je Fall: Voxel x pixdim)
-MM3_TOP = (2, 5, 8)                            # nur diese 3 Punkte kriegen das Aspekt-Grid
-ASPEKT_GRID = (1.25, 1.5, 2.0, 3.0)            # Formfilter: max/min bbox-Halblaenge
+V1_VENTRIKEL = {4, 12, 13, 22, 23}          # lat./infer. lat. ventricle (l/r), 3rd, 4th ventricle
+V2_CSF = V1_VENTRIKEL | {17}                 # + free CSF
+MAX_KOMP_VOX = 2100                            # blob guard from we4 (in voxels)
+MM3_GRID = (1, 2, 3, 5, 8, 12, 20, 30, 50)    # size filter in mm3 (per case: voxel x pixdim)
+MM3_TOP = (2, 5, 8)                            # only these 3 points get the aspect grid
+ASPEKT_GRID = (1.25, 1.5, 2.0, 3.0)            # shape filter: max/min bbox half-length
 
 sys.path.insert(0, f"{ROOT}/code")
 from metric import hits, summarize
 from metric_valdo import label_for
 
-# ------------------------------------------------------------------- Filter-Grundoperationen
+# ------------------------------------------------------------------- basic filter operations
 
 def komponenten(bin_map):
-    """26er-Komponenten als Liste von (voxelzahl, bbox_halblangen)."""
+    """26-connectivity components as a list of (voxel count, bbox half-lengths)."""
     lab, n = ndimage.label(bin_map, structure=N26)
     out = []
     for c in range(1, n + 1):
@@ -76,7 +76,7 @@ def aspekt(bb_halb):
     return float(bb.max() / bb.min())
 
 def filter_mind_mm3(bin_map, vox_mm3, mind_mm3, max_komp_vox=MAX_KOMP_VOX, aspekt_max=None):
-    """26er-Komponenten entfernen: < mind_mm3, > max_komp_vox Voxel, oder aspekt > aspekt_max."""
+    """Remove 26-connectivity components: < mind_mm3, > max_komp_vox voxels, or aspect > aspekt_max."""
     lab, comps = komponenten(bin_map)
     out = np.zeros_like(bin_map)
     for c in range(1, lab.max() + 1):
@@ -91,8 +91,8 @@ def filter_mind_mm3(bin_map, vox_mm3, mind_mm3, max_komp_vox=MAX_KOMP_VOX, aspek
     return out
 
 def fp_filter_synthseg(pred_bin, vent_mask):
-    """Kandidatenkomponenten verwerfen, deren SCHWERPUNKT in der Ventrikel/CSF-Maske faellt.
-    (Auftrag: 'deren Schwerpunkt in Ventrikel/CSF faellt'; kein Touch-Filter.)"""
+    """Discard candidate components whose CENTROID falls inside the ventricle/CSF mask.
+    (Task: 'whose centroid falls in ventricle/CSF'; not a touch filter.)"""
     lab, n = ndimage.label(pred_bin, structure=N26)
     out = np.zeros_like(pred_bin)
     for c in range(1, n + 1):
@@ -103,27 +103,27 @@ def fp_filter_synthseg(pred_bin, vent_mask):
     return out
 
 def resample_labels(lab, src_aff, gc_aff, gc_shape):
-    """Labels im Quellraster (src_aff) auf das Gitter-C-Raster (naechste Nachbarschaft,
-    cval=0 = Hintergrund). Rasterumrechnung via Weltkoordinaten, keine Registrierung."""
+    """Labels in the source raster (src_aff) onto the Grid-C raster (nearest neighbour,
+    cval=0 = background). Grid conversion via world coordinates, not a registration."""
     grids = np.meshgrid(*[np.arange(s, dtype=float) for s in gc_shape], indexing="ij")
     xyz = np.stack([g.ravel() for g in grids], 0)
     world = gc_aff @ np.vstack([xyz, np.ones(len(xyz[0]))[None, :]])
     src_vox = np.linalg.inv(src_aff) @ world
-    # src_vox ist (4, N) in homogenen Koordinaten; nur die ersten 3 Achsen resamplen.
+    # src_vox is (4, N) in homogeneous coordinates; resample only the first 3 axes.
     return ndimage.map_coordinates(lab, src_vox[:3].reshape(3, *gc_shape),
                                    order=0, mode="constant", cval=0).astype(np.uint8)
 
 def synthseg_maske(pid, variant):
-    """Resample SynthSeg (T1-Grid) auf Gitter-C (naechste Nachbarschaft), Boolean-Maske."""
+    """Resample SynthSeg (T1 grid) onto Grid C (nearest neighbour), boolean mask."""
     seg = nib.load(f"{ROOT}/dev/synthseg/{pid}_synthseg.nii.gz")
     gc = nib.load(f"{ROOT}/dev/gitter_c/{pid}/{pid}_image.nii.gz")
     lab = np.asarray(seg.dataobj)
     if lab.shape != gc.shape:
-        raise SystemExit(f"{pid}: synthseg {lab.shape} != gitter_c {gc.shape}")
+        raise SystemExit(f"{pid}: synthseg {lab.shape} != grid C {gc.shape}")
     return np.isin(lab, list(variant))
 
 def kette_anwenden(pred_bin, vox_mm3, kette, vent_mask=None):
-    """Eingefrorene Kette auf eine binaere Vorhersage anwenden (Gitter-C-Raum)."""
+    """Apply the frozen chain to a binary prediction (Grid-C space)."""
     out = pred_bin
     if kette.get("groesse_mm3"):
         out = filter_mind_mm3(out, vox_mm3, kette["groesse_mm3"],
@@ -132,24 +132,24 @@ def kette_anwenden(pred_bin, vox_mm3, kette, vent_mask=None):
         out = fp_filter_synthseg(out, vent_mask)
     return out
 
-# ------------------------------------------------------------------- SynthSeg-Aufruf
+# ------------------------------------------------------------------- SynthSeg call
 
 def synthseg_lauf(ids, parallel=3):
-    """mri_synthseg (CPU, 8 Threads pro Fall) + Resample auf Gitter-C."""
+    """mri_synthseg (CPU, 8 threads per case) + resample onto Grid C."""
     os.makedirs(f"{ROOT}/dev/synthseg", exist_ok=True)
     zu_tun = [i for i in ids if not os.path.exists(f"{ROOT}/dev/synthseg/{i}_synthseg.nii.gz")]
     if not zu_tun:
-        print("alle SynthSeg schon da"); return
+        print("all SynthSeg already done"); return
     def ein(id_):
         t1 = f"{EXTERN}/{id_}/{id_}_space-T2S_desc-masked_T1.nii.gz"
         o = f"{ROOT}/dev/synthseg/{id_}_roh"
         t0 = time.time()
-        # NaN-Reparatur (Coach 14.09. 21:5x): 33/72 gelieferte T1s tragen NaN als
-        # Randschale ausserhalb des Hirnraums (dreifach erodierte Hirnmaske NaN-frei,
-        # sub-304: eine zusammenhaengende Komponente an der Volumenrand, sub-102: zwei).
-        # NaN vergiftet die Perzentilnormierung des Segmentierers -> leere
-        # Segmentierung, rc 0, Fall verschwindet lautlos. Nullsetzen erfindet keine
-        # Anatomie. Bereinigte TEMPORAERE Kopie; die gelieferte Datei bleibt unberuehrt.
+        # NaN repair (coach 14 Sep 21:5x): 33/72 delivered T1s carry NaN as an
+        # edge shell outside the brain volume (triple-eroded brain mask NaN-free,
+        # sub-304: one connected component at the volume edge, sub-102: two).
+        # NaN poisons the segmenter's percentile normalisation -> empty
+        # segmentation, rc 0, the case disappears silently. Zeroing does not invent
+        # anatomy. Cleaned TEMPORARY copy; the delivered file stays untouched.
         im = nib.load(t1)
         a = np.asanyarray(im.dataobj)
         nan0 = t1 + ".nan0.nii.gz"
@@ -165,19 +165,19 @@ def synthseg_lauf(ids, parallel=3):
             return id_, f"rc={r.returncode}: {r.stderr[:200]}"
         f = glob.glob(f"{o}/*_synthseg.nii.gz")
         if not f:
-            return id_, "keine Ausgabe"
-        # neueste Datei (mtime), nicht alphabetisch: eine stale Rohausgabe aus einem
-        # fruheren Lauf (z.B. vor der NaN-Reparatur) darf die aktuelle nicht verdecken
+            return id_, "no output"
+        # newest file (mtime), not alphabetical: a stale raw output from an
+        # earlier run (e.g. before the NaN repair) must not shadow the current one
         f = [max(f, key=os.path.getmtime)]
         roh = nib.load(f[0])
         gc = nib.load(f"{ROOT}/dev/gitter_c/{id_}/{id_}_image.nii.gz")
         zi = resample_labels(np.asarray(roh.dataobj), roh.affine, gc.affine, gc.shape)
         u = np.unique(zi)
         if len(u) < 20:
-            return id_, f"SUSP: nur {len(u)} Labels nach Resample"
+            return id_, f"SUSP: only {len(u)} labels after resample"
         nib.save(nib.Nifti1Image(zi, gc.affine), f"{ROOT}/dev/synthseg/{id_}_synthseg.nii.gz")
-        # Rohausgabe nach Erfolg entfernen (rmtree: mri_synthseg hinterlaesst mehr
-        # als eine Datei im Verzeichnis, os.rmdir scheitert mit ENOTEMPTY)
+        # remove raw output after success (rmtree: mri_synthseg leaves more
+        # than one file in the directory, os.rmdir fails with ENOTEMPTY)
         shutil.rmtree(o, ignore_errors=True)
         return id_, f"ok {time.time()-t0:.0f}s labels={len(u)}"
     from concurrent.futures import ThreadPoolExecutor
@@ -185,17 +185,17 @@ def synthseg_lauf(ids, parallel=3):
         for id_, st in ex.map(ein, zu_tun):
             print(f"synthseg {id_}: {st}", flush=True)
 
-# ------------------------------------------------------------------- CV: Vorhersagen + Messung
+# ------------------------------------------------------------------- CV: predictions + measurement
 
 def cv_faelle():
-    """57 CV-Faelle: (id, bin_pred, vox_mm3, ref) auf Gitter-C."""
+    """57 CV cases: (id, bin_pred, vox_mm3, ref) on Grid C."""
     d = json.load(open(f"{ROOT}/dev/split.json"))
     out = []
     for k, fids in enumerate(d["folds"]):
         for pid in fids:
             pp = f"{ROOT}/ergebnisse/cv5-best/fold{k}/{pid}_pred.nii.gz"
             if not os.path.exists(pp):
-                raise SystemExit(f"CV-Vorhersage fehlt: {pp}")
+                raise SystemExit(f"CV prediction missing: {pp}")
             pi = nib.load(pp)
             ref = np.asarray(label_for(pid, pi).dataobj) > 0
             out.append((pid, np.asarray(pi.dataobj) > 0,
@@ -204,7 +204,7 @@ def cv_faelle():
     return out
 
 def messen(faelle, kette=None, ventmasken=None):
-    """Gepoolte 26er-Messung; ventmasken: {pid: {variant: boolarray}} oder None."""
+    """Pooled 26-connectivity measurement; ventmasken: {pid: {variant: boolarray}} or None."""
     rows = []
     for pid, pm, vox_mm3, ref in faelle:
         out = pm
@@ -215,9 +215,9 @@ def messen(faelle, kette=None, ventmasken=None):
     return summarize(rows), rows
 
 def cv_abstimmung(faelle, ventmasken):
-    """Alle Stufen auf der CV messen, beste Kette (nur F1-verbessernde Stufen)."""
+    """Measure all stages on the CV, best chain (only F1-improving stages)."""
     roh, _ = messen(faelle)
-    print(f"CV roh: F1 {roh['f1']} sens {roh['sensitivity']} fp/fall {roh['fp_per_case']} "
+    print(f"CV raw: F1 {roh['f1']} sens {roh['sensitivity']} fp/case {roh['fp_per_case']} "
           f"(n_pred {roh['n_pred']})", flush=True)
 
     beste = (roh["f1"], dict(groesse_mm3=None, aspekt=None, synthseg_variant=None))
@@ -230,9 +230,9 @@ def cv_abstimmung(faelle, ventmasken):
             if s["f1"] > beste[0]:
                 beste = (s["f1"], dict(groesse_mm3=mm3, aspekt=asp, synthseg_variant=None))
     b_f1, b_k = beste
-    print(f"CV beste Groessenstufe: F1 {b_f1} kette {b_k}", flush=True)
+    print(f"CV best size stage: F1 {b_f1} chain {b_k}", flush=True)
 
-    # SynthSeg-Stufe: auf der besten Groessenstufe, V1 und V2 getrennt
+    # SynthSeg stage: on the best size stage, V1 and V2 separately
     stufen = {"roh": roh}
     stufen["groesse"] = messen(faelle, dict(groesse_mm3=b_k["groesse_mm3"],
                                             aspekt=b_k["aspekt"], synthseg_variant=None))[0] \
@@ -241,15 +241,15 @@ def cv_abstimmung(faelle, ventmasken):
         k = dict(b_k, synthseg_variant=v)
         s, _ = messen(faelle, k, ventmasken)
         stufen[v] = s
-        print(f"CV {v}: F1 {s['f1']} sens {s['sensitivity']} fp/fall {s['fp_per_case']} "
-              f"tp {s['tp']} (Basis tp {stufen['groesse']['tp']})", flush=True)
+        print(f"CV {v}: F1 {s['f1']} sens {s['sensitivity']} fp/case {s['fp_per_case']} "
+              f"tp {s['tp']} (baseline tp {stufen['groesse']['tp']})", flush=True)
         if s["f1"] > beste[0]:
             beste = (s["f1"], k)
 
     kette = beste[1]
-    # TP-Verluste je SynthSeg-Variante ausweisen (gegen Groessenstufe)
+    # report TP losses per SynthSeg variant (against the size stage)
     tp_verlust = {v: stufen["groesse"]["tp"] - stufen[v]["tp"] for v in ("V1", "V2")}
-    print(f"EINGEFROREN: F1 {beste[0]} kette {kette} TP-Verlust {tp_verlust}", flush=True)
+    print(f"FROZEN: F1 {beste[0]} chain {kette} TP loss {tp_verlust}", flush=True)
 
     return dict(
         kette=kette,
@@ -270,7 +270,7 @@ def cv_abstimmung(faelle, ventmasken):
                  "nach dem Blick auf die Validierungszahlen ist verboten (Set verbrannt)."),
     )
 
-# ------------------------------------------------------------------- Validierung (EINMAL)
+# ------------------------------------------------------------------- Validation (ONCE)
 
 def validierung_einmal(fk_pf, probe=False, schwelle=None):
     import torch
@@ -286,7 +286,7 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
         outd = f"{ROOT}/ergebnisse/validierung"
     os.makedirs(outd, exist_ok=True)
 
-    # 5 r3-Falten-Modelle (bestes Modell aus we4) mit out-of-fold-Parametern
+    # 5 r3 fold models (best model from we4) with out-of-fold parameters
     mods = []
     for k in range(5):
         meta = json.load(open(f"{ROOT}/dev/modelle/best/fold{k}/meta.json"))
@@ -295,11 +295,11 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
         m.load_state_dict(torch.load(f"{ROOT}/dev/modelle/best/fold{k}/modell.pt", map_location="cpu"))
         m.to(cv5.DEV); m.eval()
         mods.append((m, meta["schwelle"], meta["mindestgroesse"]))
-    print(f"{len(mods)} r3-Modelle geladen (Schwellen "
-          f"{[m[1] for m in mods]}, mg-Voxel {[m[2] for m in mods]})", flush=True)
+    print(f"{len(mods)} r3 models loaded (thresholds "
+          f"{[m[1] for m in mods]}, mg voxels {[m[2] for m in mods]})", flush=True)
 
-    cv5.lade_daten(ids=None)   # nur Falten-Faelle; Validierung wird nicht geladen (fold -1)
-    # Val-Faelle in die recs-Struktur bringen (gleiche Gitter-C-Dateien)
+    cv5.lade_daten(ids=None)   # fold cases only; validation is not loaded (fold -1)
+    # bring val cases into the recs structure (same Grid-C files)
     d = json.load(open(f"{ROOT}/dev/cases.json"))["t2star"]["cases"]
     for c in d:
         if c["fold"] != -1:
@@ -313,13 +313,13 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
             lab=dreh((np.asarray(nib.load(f"{cv5.GITTER}/{sid}/{sid}_label.nii.gz").dataobj) > 0).astype(np.uint8)),
             komp=[], fold=-1, affine=ni.affine)
 
-    # SynthSeg-Masken (V1/V2) im Gitter-C-Raum
+    # SynthSeg masks (V1/V2) in Grid-C space
     ventmasken = {pid: {"V1": synthseg_maske(pid, V1_VENTRIKEL), "V2": synthseg_maske(pid, V2_CSF)}
                   for pid in val_ids}
-    # Praez-Check der Resample-Maske
+    # precision check of the resample mask
     for pid in val_ids[:1]:
-        print(f"{pid} synthseg-Maske: V1 {int(ventmasken[pid]['V1'].sum())} Voxel, "
-              f"V2 {int(ventmasken[pid]['V2'].sum())} Voxel", flush=True)
+        print(f"{pid} synthseg mask: V1 {int(ventmasken[pid]['V1'].sum())} voxels, "
+              f"V2 {int(ventmasken[pid]['V2'].sum())} voxels", flush=True)
 
     rows = []
     t0 = time.time()
@@ -329,11 +329,11 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
         votes = np.zeros_like(np.asarray(gc.dataobj), dtype=np.uint8)
         for m, thr, mg_vox in mods:
             p, nk = cv5.proba_fall(m, pid)
-            # proba_fall liefert cv5-Internausrichtung (x,y,z) (recs via dreh=transpose(2,1,0));
-            # votes/ventmasken liegen im nativen Gitter-C-Raum (z,y,x) -> zurueckdrehen wie cv5.py Z.340/347
+            # proba_fall returns cv5's internal orientation (x,y,z) (recs via dreh=transpose(2,1,0));
+            # votes/ventmasken are in the native Grid-C space (z,y,x) -> rotate back like cv5.py line 340/347
             p = np.ascontiguousarray(p.transpose(2, 1, 0))
             b = p > (schwelle if schwelle is not None else thr)
-            # out-of-fold Voxel-Mindestgroesse (we4: in Voxel)
+            # out-of-fold minimum voxel size (we4: in voxels)
             lab, n = ndimage.label(b, structure=N26)
             b2 = np.zeros_like(b)
             for c in range(1, n + 1):
@@ -369,7 +369,7 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
     tmp = f"{outd}/summary.json.tmp"
     json.dump(z, open(tmp, "w"), indent=1, ensure_ascii=False)
     os.replace(tmp, f"{outd}/summary.json")
-    print("VALIDIERUNG FERTIG ->", f"{outd}/summary.json", flush=True)
+    print("VALIDATION DONE ->", f"{outd}/summary.json", flush=True)
     print(json.dumps(z, indent=1, ensure_ascii=False), flush=True)
     return z
 
@@ -383,22 +383,22 @@ def main():
     ap.add_argument("--synthseg", nargs="*", default=None)
     ap.add_argument("--parallel", type=int, default=1)
     ap.add_argument("--schwelle", type=float, default=None,
-                    help="gilt fuer --validierung: globale Schwelle statt je-Falte out-of-fold-Schwelle")
+                    help="applies to --validierung: global threshold instead of per-fold out-of-fold threshold")
     a = ap.parse_args()
     if a.synthseg is not None:
         synthseg_lauf(a.synthseg, a.parallel)
     elif a.cv:
         faelle = cv_faelle()
-        print(f"{len(faelle)} CV-Faelle geladen", flush=True)
+        print(f"{len(faelle)} CV cases loaded", flush=True)
         ventmasken = {pid: {"V1": synthseg_maske(pid, V1_VENTRIKEL),
                             "V2": synthseg_maske(pid, V2_CSF)} for pid, *_ in faelle}
         fk = cv_abstimmung(faelle, ventmasken)
         tmp = f"{ROOT}/dev/filterkette.json.tmp"
         json.dump(fk, open(tmp, "w"), indent=1, ensure_ascii=False)
         os.replace(tmp, f"{ROOT}/dev/filterkette.json")
-        print("dev/filterkette.json EINGEFROREN", flush=True)
+        print("dev/filterkette.json FROZEN", flush=True)
     elif a.probe:
-        # 1 CV-Fall (Filter-Pfade) + 2 Val-Faelle (Inferenz-Zeit), mit Zeitmessung
+        # 1 CV case (filter paths) + 2 val cases (inference time), with timing
         faelle = cv_faelle()[:1]
         pid = faelle[0][0]
         v = {"V1": synthseg_maske(pid, V1_VENTRIKEL), "V2": synthseg_maske(pid, V2_CSF)}
@@ -408,7 +408,7 @@ def main():
         s, _ = messen(faelle, dict(groesse_mm3=5, aspekt=None, synthseg_variant=None), {"V1": v, "V2": v})
         s, _ = messen(faelle, dict(groesse_mm3=5, aspekt=None, synthseg_variant="V2"), {"V1": v, "V2": v})
         t2 = time.time()
-        print(f"PROBE CV-Fall {pid}: roh F1 {roh['f1']}, Filter {t1-t0:.2f}s, +SynthSeg {t2-t1:.2f}s")
+        print(f"PROBE CV case {pid}: raw F1 {roh['f1']}, filter {t1-t0:.2f}s, +SynthSeg {t2-t1:.2f}s")
         validierung_einmal(f"{ROOT}/dev/filterkette.json", probe=True)
         print("PROBE OK", flush=True)
     elif a.validierung:

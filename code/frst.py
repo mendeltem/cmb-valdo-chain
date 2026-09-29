@@ -1,45 +1,45 @@
 #!/usr/bin/env python3
-"""FRST-Kanal neu (Claude 11.09.2026): Fast Radial Symmetry Transform nach
-Loy & Zelinsky (2003, IEEE PAMI 25(8)), je axialer Schicht, vektorisiert.
+"""FRST channel, new version (Claude 11 Sep 2026): Fast Radial Symmetry Transform
+after Loy & Zelinsky (2003, IEEE PAMI 25(8)), per axial slice, vectorized.
 
-Warum neu: die alte Umsetzung (microbleednet, scripts/data_preparation.py
-fast_radial_symmetry_xfm, ~Z. 530-590) hat drei Fehler, die das Signal
-verzerren -- gemessen im --selftest unten:
-  1. g = gradient.astype(int): Gradienten < 1 werden 0 (auf einem Bild in
-     [0,1] stimmt dann KEIN Pixel ab; auf dem FAST-Bild in Hunderten wird
-     die Richtung grob quantisiert).
-  2. g // g_norm: Ganzzahl-Division -- jede Richtungskomponente wird zu
-     {-1, 0} (1 nur exakt achsparallel). Die Stimmen landen damit nur in
-     den Nachbarn "links/oben", der Gipfel wandert um bis zu n Pixel
-     diagonal von der Blutungsmitte weg.
-  3. O_n und M_n werden je Schicht durch ihr Maximum geteilt statt an k_n
-     gekappt: eine Schicht ohne Blutung wird auf dieselbe Hoehe gezogen wie
-     eine mit (Rauschen wird Signal), und die Skala springt von Schicht zu
-     Schicht.
+Why new: the old implementation (microbleednet, scripts/data_preparation.py
+fast_radial_symmetry_xfm, ~line 530-590) has three bugs that distort the
+signal -- measured in the --selftest below:
+  1. g = gradient.astype(int): gradients < 1 become 0 (on an image in
+     [0,1] then NO pixel votes at all; on the FAST image, in the hundreds,
+     the direction is coarsely quantized).
+  2. g // g_norm: integer division -- every direction component becomes
+     {-1, 0} (1 only when exactly axis-aligned). The votes then only land
+     in the "left/top" neighbours, and the peak drifts up to n pixels
+     diagonally away from the bleed centre.
+  3. O_n and M_n are divided per slice by their maximum instead of being
+     capped at k_n: a slice without a bleed gets pulled up to the same
+     height as one with a bleed (noise becomes signal), and the scale
+     jumps from slice to slice.
 
-Hier, je Schicht (Paper-Notation):
-  g      = Sobel-Gradient in der Ebene (3x3, /8 -> Intensitaet je Voxel),
-           Bild vorher durch den Hirn-Median des Falls geteilt: |g| ist damit
-           "Kontrast relativ zum Gewebe je Voxel", ueber Kohorten vergleichbar.
-  u      = g / |g|  (echte Division)
-  p+     = p + round(n*u)   (hell: Gradient zeigt ins Helle, also zur Mitte
-                             eines hellen Flecks; das gitter_c-Bild ist
-                             INVERTIERT, Blutungen sind hell -> Modus "hell")
-  O_n(p+) += 1,  M_n(p+) += |g|        (np.bincount = np.add.at, schneller)
-  Õ_n    = O_n gekappt bei k_n  (k_n = 9.9 fuer n=1, sonst 8)
+Here, per slice (paper notation):
+  g      = Sobel gradient in-plane (3x3, /8 -> intensity per voxel),
+           image first divided by the case's brain median: |g| is thus
+           "contrast relative to tissue per voxel", comparable across cohorts.
+  u      = g / |g|  (true division)
+  p+     = p + round(n*u)   (bright: gradient points into the bright area, i.e.
+                             toward the centre of a bright spot; the gitter_c
+                             image is INVERTED, bleeds are bright -> mode "hell")
+  O_n(p+) += 1,  M_n(p+) += |g|        (np.bincount = np.add.at, faster)
+  Õ_n    = O_n capped at k_n  (k_n = 9.9 for n=1, otherwise 8)
   F_n    = (M_n / k_n) * (|Õ_n| / k_n)^alpha,  alpha = 2
   S_n    = F_n * Gauss(sigma = 0.25 n)
-  S      = Mittel ueber n
-Radien in VOXELN; auf 0.5 mm in der Ebene sind [2,3,4,6] = 1-3 mm, in allen
-Kohorten dieselbe physische Groesse (anders als die alten [2,3] auf dem
-Originalgitter: 0.9-1.4 mm in Ko1/Ko2, 2-3 mm in Ko3).
+  S      = mean over n
+Radii in VOXELS; at 0.5 mm in-plane, [2,3,4,6] = 1-3 mm, the same physical
+size in all cohorts (unlike the old [2,3] on the original grid: 0.9-1.4 mm
+in cohort1/cohort2, 2-3 mm in cohort3).
 
-Hirnrand: ausserhalb des Hirns wird vor der FRST mit dem Hirn-Median der
-Schicht gefuellt (sonst ist der Rand die staerkste Kante im Bild und macht
-Ringantworten), die Maske dafuer um 1 Voxel erodiert (der linear
-interpolierte Randsaum zaehlt nicht als Gewebe). Nach der FRST: ausserhalb
-des Hirns 0, je Fall durch das 99.9-Perzentil im Hirn geteilt, auf [0,1]
-gekappt -- KONTINUIERLICH, keine Schwelle.
+Brain edge: outside the brain, the slice is filled with the slice's brain
+median before the FRST (otherwise the edge is the strongest boundary in the
+image and produces ring responses); the mask used for this is eroded by
+1 voxel (the linearly interpolated edge rim does not count as tissue). After
+the FRST: 0 outside the brain, divided per case by the 99.9th percentile
+within the brain, capped to [0,1] -- CONTINUOUS, no threshold.
 
   python frst.py --selftest
 """
@@ -47,7 +47,7 @@ import sys, time
 import numpy as np
 from scipy import ndimage
 
-RADIEN = (2, 3, 4, 6)     # Voxel auf 0.5 mm = 1, 1.5, 2, 3 mm
+RADIEN = (2, 3, 4, 6)     # voxels at 0.5 mm = 1, 1.5, 2, 3 mm
 ALPHA = 2.0
 PERZENTIL = 99.9
 
@@ -57,8 +57,8 @@ def k_n(n):
 
 
 def gradient_2d(s):
-    """Sobel 3x3 in der Ebene, /8: Ableitung in Intensitaet je Voxel.
-    Achse 0 = x, Achse 1 = y (nibabel-Reihenfolge, wie die Volumen)."""
+    """Sobel 3x3 in-plane, /8: derivative in intensity per voxel.
+    Axis 0 = x, axis 1 = y (nibabel order, like the volumes)."""
     d = np.array([-1.0, 0.0, 1.0]) / 2.0
     w = np.array([1.0, 2.0, 1.0]) / 4.0
     gx = ndimage.correlate1d(ndimage.correlate1d(s, d, axis=0, mode="nearest"), w, axis=1, mode="nearest")
@@ -67,8 +67,8 @@ def gradient_2d(s):
 
 
 def frst_schicht(s, radien=RADIEN, alpha=ALPHA, beta=0.0, modus="hell"):
-    """FRST einer 2D-Schicht, ohne Normierung (S = Mittel der S_n).
-    beta: Gradienten mit |g| <= beta stimmen nicht ab (Paper: beta)."""
+    """FRST of a 2D slice, without normalization (S = mean of S_n).
+    beta: gradients with |g| <= beta do not vote (paper: beta)."""
     s = np.asarray(s, dtype=np.float64)
     X, Y = s.shape
     gx, gy = gradient_2d(s)
@@ -102,7 +102,7 @@ def frst_schicht(s, radien=RADIEN, alpha=ALPHA, beta=0.0, modus="hell"):
 
 
 def hirnmaske(img):
-    """Hirn = img > 0, Loecher je Schicht gefuellt (wie microbleednet)."""
+    """Brain = img > 0, holes filled per slice (like microbleednet)."""
     m = img > 0
     for z in range(m.shape[2]):
         m[:, :, z] = ndimage.binary_fill_holes(m[:, :, z])
@@ -111,22 +111,22 @@ def hirnmaske(img):
 
 def frst_volumen(img, hirn=None, radien=RADIEN, alpha=ALPHA, beta=0.0, modus="hell",
                  perzentil=PERZENTIL):
-    """FRST je axialer Schicht (Achse 2) eines (x,y,z)-Volumens.
-    Rueckgabe: (frst float32 in [0,1], info-dict)."""
+    """FRST per axial slice (axis 2) of an (x,y,z) volume.
+    Returns: (frst float32 in [0,1], info dict)."""
     img = np.asarray(img, dtype=np.float32)
     if hirn is None:
         hirn = hirnmaske(img)
     innen = np.zeros_like(hirn)
     for z in range(hirn.shape[2]):
         innen[:, :, z] = ndimage.binary_erosion(hirn[:, :, z])
-    ref = float(np.median(img[innen])) if innen.any() else 1.0   # Gewebeniveau des Falls
+    ref = float(np.median(img[innen])) if innen.any() else 1.0   # tissue level of the case
     out = np.zeros(img.shape, dtype=np.float32)
     for z in range(img.shape[2]):
         if not innen[:, :, z].any():
             continue
         s = img[:, :, z].astype(np.float64) / ref
         med = np.median(s[innen[:, :, z]])
-        s[~innen[:, :, z]] = med            # Rand darf keine Kante sein
+        s[~innen[:, :, z]] = med            # edge must not be a boundary
         out[:, :, z] = frst_schicht(s, radien, alpha, beta, modus)
     out[~hirn] = 0.0
     p = float(np.percentile(out[hirn], perzentil)) if hirn.any() else 0.0
@@ -137,9 +137,9 @@ def frst_volumen(img, hirn=None, radien=RADIEN, alpha=ALPHA, beta=0.0, modus="he
                                      "alpha": alpha, "beta": beta, "modus": modus}
 
 
-# ----------------------------------------------------------------- Selbsttest
+# ----------------------------------------------------------------- Self-test
 def _alt_frst(s, radii=(2, 3), bright=False, dark=False):
-    """Die alte Umsetzung (microbleednet), zum Vergleich importiert."""
+    """The old implementation (microbleednet), imported for comparison."""
     sys.path.insert(0, "/home/uchralt/software/microbleed-detection")
     from microbleednet.scripts.data_preparation import fast_radial_symmetry_xfm
     with np.errstate(all="ignore"):
@@ -155,25 +155,25 @@ def _scheibe(X, Y, cx, cy, r):
 
 def selftest():
     rng = np.random.default_rng(0)
-    X, Y = 200, 200                    # 0.5 mm je Voxel -> 100 x 100 mm
+    X, Y = 200, 200                    # 0.5 mm per voxel -> 100 x 100 mm
     kontrast = 0.3
     img = np.full((X, Y), 0.6)
-    # helle Scheiben (invertiertes Bild: Blutung hell): r = 2 mm (4 vx), r = 4 mm (8 vx)
+    # bright disks (inverted image: bleed bright): r = 2 mm (4 vx), r = 4 mm (8 vx)
     scheiben = {"r2mm": (50, 50, 4), "r4mm": (50, 140, 8)}
     for cx, cy, r in scheiben.values():
         img += kontrast * _scheibe(X, Y, cx, cy, r)
-    # helle Linien (Gefaess) gleichen Kontrasts: Breite 1 mm (2 vx) und 2 mm (4 vx)
+    # bright lines (vessel) of equal contrast: width 1 mm (2 vx) and 2 mm (4 vx)
     linien = {"b1mm": (120, 2), "b2mm": (160, 4)}
     for x0, b in linien.values():
         img[x0 - b // 2: x0 - b // 2 + b, 20:180] += kontrast
-    img = ndimage.gaussian_filter(img, 0.7)        # Partialvolumen
-    img += rng.normal(0, 0.02, img.shape)          # Rauschen, SNR ~ 15
+    img = ndimage.gaussian_filter(img, 0.7)        # partial volume
+    img += rng.normal(0, 0.02, img.shape)          # noise, SNR ~ 15
 
     t = time.time()
     S = frst_schicht(img / np.median(img))
     dt = time.time() - t
     ok = True
-    print(f"FRST neu, 200x200, Radien {RADIEN}: {dt*1000:.0f} ms")
+    print(f"FRST new, 200x200, radii {RADIEN}: {dt*1000:.0f} ms")
     peak = {}
     for name, (cx, cy, r) in scheiben.items():
         w = 2 * r
@@ -184,17 +184,17 @@ def selftest():
         tol = 1 if r <= 4 else 2
         good = max(abs(off[0]), abs(off[1])) <= tol
         ok &= good
-        print(f"  Scheibe {name}: Gipfel {fen.max():.4f} bei Versatz {off} vx von der Mitte "
-              f"(Toleranz {tol}) {'OK' if good else 'FEHLER'}")
+        print(f"  Disk {name}: peak {fen.max():.4f} at offset {off} vx from the centre "
+              f"(tolerance {tol}) {'OK' if good else 'FAIL'}")
     for name, (x0, b) in linien.items():
-        lin = S[x0 - 6: x0 + 7, 40:160].max()      # Linienenden (20/180) ausgespart
+        lin = S[x0 - 6: x0 + 7, 40:160].max()      # line ends (20/180) excluded
         q = lin / peak["r2mm"]
         good = q < 0.5
         ok &= good
-        print(f"  Linie {name}: max {lin:.4f} = {q:.2f} x Scheibe r2mm  "
-              f"({'OK, klar niedriger' if good else 'FEHLER'})")
-    # Rand-Test: Hirn als Ellipse auf 0 (nur Gewebe + Scheibe r2mm, keine Linien),
-    # mit/ohne Median-Fuellung; Normierung aufs Maximum, damit nichts kappt.
+        print(f"  Line {name}: max {lin:.4f} = {q:.2f} x disk r2mm  "
+              f"({'OK, clearly lower' if good else 'FAIL'})")
+    # Edge test: brain as an ellipse on 0 (only tissue + disk r2mm, no lines),
+    # with/without median fill; normalized to the maximum so nothing is capped.
     xx, yy = np.mgrid[0:X, 0:Y]
     ell = ((xx - 100) / 90.0) ** 2 + ((yy - 100) / 70.0) ** 2 <= 1
     hg = ndimage.gaussian_filter(0.6 + kontrast * _scheibe(X, Y, 100, 100, 4), 0.7) \
@@ -206,25 +206,25 @@ def selftest():
     q_mit = f_mit[:, :, 0][rand].max() / f_mit[:, :, 0][97:104, 97:104].max()
     q_ohne = roh[rand].max() / roh[97:104, 97:104].max()
     ok &= q_mit < 0.5
-    print(f"  Hirnrand (6-vx-Saum) / Scheibe r2mm: ohne Median-Fuellung {q_ohne:.2f}, "
-          f"mit {q_mit:.2f} {'OK' if q_mit < 0.5 else 'FEHLER'}")
+    print(f"  Brain edge (6-vx rim) / disk r2mm: without median fill {q_ohne:.2f}, "
+          f"with {q_mit:.2f} {'OK' if q_mit < 0.5 else 'FAIL'}")
 
-    # Alte Umsetzung auf derselben Schicht. Sie lief in preprocess_subject mit
-    # dark=True auf dem NICHT invertierten FAST-Bild (Intensitaeten in Hunderten):
-    # dort sind Blutungen dunkel -> dieselbe Szene invertiert und x1000.
+    # Old implementation on the same slice. In preprocess_subject it ran with
+    # dark=True on the NON-inverted FAST image (intensities in the hundreds):
+    # there bleeds are dark -> same scene inverted and x1000.
     alt_dunkel = _alt_frst((1.0 - img) * 1000.0, dark=True)
     alt_hell = _alt_frst(img * 1000.0, bright=True)
     alt_01 = _alt_frst(img, bright=True)
-    for lab, A in (("alt dark=True, 1000*(1-img) [wie preprocess]", alt_dunkel),
-                   ("alt bright=True, 1000*img", alt_hell)):
+    for lab, A in (("old dark=True, 1000*(1-img) [like preprocess]", alt_dunkel),
+                   ("old bright=True, 1000*img", alt_hell)):
         for name, (cx, cy, r) in scheiben.items():
             w = 2 * r
             fen = A[cx - w: cx + w + 1, cy - w: cy + w + 1]
             i, j = np.unravel_index(np.argmax(fen), fen.shape)
-            print(f"  {lab}: Scheibe {name} Gipfel bei Versatz ({int(i - w)}, {int(j - w)}) vx")
-    print(f"  alt bright=True auf Bild in [0,1]: max {alt_01.max():.3g} "
-          f"(int-Cast: Gradienten < 1 -> 0, keine Stimme)")
-    # Richtungsschiefe direkt: Verteilung der Stimmrichtungen alt vs neu
+            print(f"  {lab}: disk {name} peak at offset ({int(i - w)}, {int(j - w)}) vx")
+    print(f"  old bright=True on image in [0,1]: max {alt_01.max():.3g} "
+          f"(int cast: gradients < 1 -> 0, no vote)")
+    # Direction skew directly: distribution of vote directions old vs new
     gx, gy = np.gradient(img * 1000.0)
     g = np.stack([gx, gy], -1).astype(int)
     gn = np.sqrt((g ** 2).sum(-1))
@@ -232,9 +232,9 @@ def selftest():
     with np.errstate(all="ignore"):
         q = np.floor_divide(g[m], gn[m][:, None])
     werte = np.unique(q)
-    print(f"  alte Richtungen g//|g| nehmen nur die Werte {werte.tolist()} an; "
-          f"Anteil Stimmen mit Komponente +1: {(q == 1).any(-1).mean():.4f}")
-    print("SELFTEST", "BESTANDEN" if ok else "FEHLGESCHLAGEN")
+    print(f"  old directions g//|g| only take the values {werte.tolist()}; "
+          f"share of votes with component +1: {(q == 1).any(-1).mean():.4f}")
+    print("SELFTEST", "PASSED" if ok else "FAILED")
     return ok
 
 

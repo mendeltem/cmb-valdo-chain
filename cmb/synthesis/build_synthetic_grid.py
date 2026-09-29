@@ -1,4 +1,4 @@
-"""Synthetic microbleeds and vessel-like mimics for the FIRST stage (ARBEIT.md 5ae, 2026-09-28).
+"""Synthetic microbleeds and vessel-like mimics for the FIRST stage (WORKLOG.md 5ae, 2026-09-28).
 
 Why: the network has almost no training examples of heavy loads of small, low-contrast microbleeds (5ad: one held-out
 case with 73 such lesions, sensitivity 0.20, most of them with probability < 0.05). CenSynCMB (arXiv 2607.05325) gains

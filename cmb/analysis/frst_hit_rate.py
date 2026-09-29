@@ -1,6 +1,6 @@
 """Does the radial-symmetry channel (FRST) light up at the microbleeds?  Hit rate per grid and cohort.
 
-Definition as in code/gitter_c_bauen.py::frst_guete (used for the finding of 2026-09-19, ARBEIT.md 4.1 / 4.11):
+Definition as in code/gitter_c_bauen.py::frst_guete (used for the finding of 2026-09-19, WORKLOG.md 4.1 / 4.11):
   brain   = image > 0 with holes filled slice by slice (code/frst.py::hirnmaske)
   hit     = the maximum of the FRST map inside a reference lesion (26-connected component) reaches the 99th percentile
             of the FRST values of that case's brain

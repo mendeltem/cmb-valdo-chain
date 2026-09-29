@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
-"""Turnier 18.09.2026 (Claude, Nutzerauftrag): zehn moeglichst verschiedene U-Net-Architekturen
-fuer CMB auf VALDO T2*, alle mit derselben Schnittstelle
+"""Tournament 18 Sep 2026 (Claude, user request): ten as-different-as-possible U-Net architectures
+for CMB on VALDO T2*, all with the same interface
 
-    Eingang (B, nch, D, H, W) in (z, y, x)  ->  Logits (B, 1, D, H, W)
+    Input (B, nch, D, H, W) in (z, y, x)  ->  logits (B, 1, D, H, W)
 
-damit code/turnier.py sie in den unveraenderten cv5-Ablauf (Falten, Stichprobe, innere Wahl von
-Epoche/Schwelle, Klumpen-Waechter, metric.hits) einsetzen kann. Netz 10 (zweistufig) ist kein
-Einzelnetz und steht in code/stufe2.py; es setzt auf die Karten des besten Netzes von hier auf.
+so that code/turnier.py can plug them into the unchanged cv5 flow (folds, sampling, inner choice of
+epoch/threshold, blob guard, metric.hits). Net 10 (two-stage) is not a
+single network and lives in code/stufe2.py; it builds on the maps of the best network from here.
 
-Warum je Netz, in einem Satz (ausfuehrlich: protokoll.md, Eintrag "Turnier"):
-  a01-attunet   Messlatte: das bisherige 3D-Attention-U-Net (= cv5 r3, InstanceNorm).
-  a02-nnunet    schlichtes U-Net im nnU-Net-Stil (LeakyReLU, InstanceNorm, Deep Supervision):
-                bringen die Gates ueberhaupt etwas?
-  a03-aniso     erste Stufe faltet/poolt nur in der Schicht: Gitter C ist 0.5x0.5x1.0 mm, und
-                Kohorte 1 hat nativ 4-mm-Schichten -- durch die Schicht steckt wenig echte Information.
-  a04-2p5d      2D-U-Net, 5 Nachbarschichten als Kanaele: viel mehr Trainingsbeispiele je Fall.
-  a05-resse     Residual-Bloecke + Squeeze-Excitation: tiefer, stabile Gradienten, Kanalgewichtung
-                (T2* gegen FRST).
-  a06-unetpp    U-Net++ (dichte, verschachtelte Skips): Objekte von wenigen Voxeln verschwinden
-                beim Herunterskalieren; die dichten Skips halten die feine Aufloesung.
-  a07-flach     nur 2 Poolingstufen, dilatierte Faltungen in der Mitte: eine CMB ist 2-10 mm,
-                wenige Parameter fuer 57 Faelle.
-  a08-swin      Swin-UNETR (Transformer-Hybrid), wenn vorhanden mit vortrainiertem Encoder:
-                globaler Kontext (Lage, Symmetrie von Verkalkungen). Der andersartigste Kandidat.
-  a09-segres    SegResNet: grosser Encoder, kleiner Decoder, GroupNorm -- fuer wenig Daten gebaut.
+Why each network, in one sentence (in detail: protokoll.md, entry "Turnier"):
+  a01-attunet   benchmark: the previous 3D attention U-Net (= cv5 r3, InstanceNorm).
+  a02-nnunet    plain U-Net in nnU-Net style (LeakyReLU, InstanceNorm, deep supervision):
+                do the gates bring anything at all?
+  a03-aniso     first stage convolves/pools only within the slice: Grid C is 0.5x0.5x1.0 mm, and
+                cohort 1 natively has 4 mm slices -- little real information lies through the slice.
+  a04-2p5d      2D U-Net, 5 neighbouring slices as channels: far more training examples per case.
+  a05-resse     residual blocks + squeeze-excitation: deeper, stable gradients, channel weighting
+                (T2* against FRST).
+  a06-unetpp    U-Net++ (dense, nested skips): objects of only a few voxels vanish
+                when downscaling; the dense skips preserve the fine resolution.
+  a07-flach     only 2 pooling stages, dilated convolutions in the middle: a CMB is 2-10 mm,
+                few parameters for 57 cases.
+  a08-swin      Swin-UNETR (transformer hybrid), with a pretrained encoder if available:
+                global context (position, symmetry of calcifications). The most dissimilar candidate.
+  a09-segres    SegResNet: large encoder, small decoder, GroupNorm -- built for little data.
 
-Normierung: ueberall InstanceNorm (Befund 11.09.: BatchNorm bei Stapel 4 mit 60 % Laesions-
-Patches passt nicht zu den Inferenzkacheln), ausser a09 (GroupNorm gehoert zur Architektur).
+Normalisation: InstanceNorm throughout (finding 11 Sep: BatchNorm at batch size 4 with 60% lesion
+patches doesn't fit the inference tiles), except a09 (GroupNorm belongs to the architecture).
 
-Selbsttest (CPU, jede Architektur einmal vor und zurueck, ungerade Patchgroesse):
+Self-test (CPU, every architecture once forward and backward, odd patch size):
     python netze.py
 """
 import os
@@ -43,8 +43,8 @@ VORTRAINIERT_SWIN = "/home/uchralt/data/work/valdo-t2s/dev/vortrainiert/model_sw
 
 # ---------------------------------------------------------------- Helfer
 class Polster(nn.Module):
-    """Polstert (D,H,W) auf Vielfache von `vielfaches` (mindestens `mindest`) und schneidet die
-    Ausgabe zurueck. `waehle` holt aus Listen-/Tupelausgaben (U-Net++) den Tensor."""
+    """Pads (D,H,W) to multiples of `vielfaches` (at least `mindest`) and crops the
+    output back. `waehle` picks the tensor out of list/tuple outputs (U-Net++)."""
     def __init__(self, netz, vielfaches, mindest=(0, 0, 0), waehle=None):
         super().__init__()
         self.netz, self.v, self.m, self.waehle = netz, tuple(vielfaches), tuple(mindest), waehle
@@ -66,7 +66,7 @@ def inorm(c):
 
 
 class Doppel(nn.Module):
-    """(Conv -> InstanceNorm -> LeakyReLU) * 2 mit waehlbarem Kern/Dilatation."""
+    """(Conv -> InstanceNorm -> LeakyReLU) * 2 with selectable kernel/dilation."""
     def __init__(self, ein, aus, kern=(3, 3, 3), dil=1):
         super().__init__()
         pad = tuple(dil * (k // 2) for k in kern)
@@ -80,13 +80,13 @@ class Doppel(nn.Module):
 
 # ---------------------------------------------------------------- a03: anisotrop
 class AnisoUNet3D(nn.Module):
-    """Stufe 0 arbeitet nur in der Schicht (Kern 1x3x3, Pooling 1x2x2). Danach ist das Gitter
-    1.0 mm isotrop und die Stufen sind gewoehnlich. z wird also einmal weniger halbiert."""
+    """Stage 0 operates only within the slice (kernel 1x3x3, pooling 1x2x2). After that the grid
+    is 1.0 mm isotropic and the stages are ordinary. z is therefore halved one time fewer."""
     def __init__(self, nch, basis=32, gates=False):
         super().__init__()
         b = basis
-        # gates=True (a11, 19.09.): dieselben Attention-Gates wie a01 auf allen vier Skips --
-        # beantwortet, ob Attention AUF dem Turniersieger etwas bringt.
+        # gates=True (a11, 19 Sep): the same attention gates as a01 on all four skips --
+        # answers whether attention ON TOP OF the tournament winner brings anything.
         self.ag = nn.ModuleList([AttentionGate3D(c, c, norm="instance") for c in (8 * b, 4 * b, 2 * b, b)]) if gates else None
         self.e0 = Doppel(nch, b, kern=(1, 3, 3))
         self.e1, self.e2, self.e3 = Doppel(b, 2 * b), Doppel(2 * b, 4 * b), Doppel(4 * b, 8 * b)
@@ -138,9 +138,9 @@ class UNet2D(nn.Module):
 
 
 class ZweiEinhalbD(nn.Module):
-    """Jede z-Schicht wird mit ihren 2*r Nachbarn als Kanaele von einem 2D-U-Net segmentiert.
-    (B, C, D, H, W) -> (B*D, C*(2r+1), H, W) -> (B, 1, D, H, W). Rand in z: Spiegelung der
-    Randschicht (replicate), nicht Null -- Null saehe aus wie ein Signalabfall."""
+    """Each z-slice is segmented with its 2*r neighbours as channels by a 2D U-Net.
+    (B, C, D, H, W) -> (B*D, C*(2r+1), H, W) -> (B, 1, D, H, W). Edge in z: mirroring of the
+    edge slice (replicate), not zero -- zero would look like a signal drop-off."""
     def __init__(self, nch, r=2, basis=32):
         super().__init__()
         self.r = r
@@ -149,7 +149,7 @@ class ZweiEinhalbD(nn.Module):
     def forward(self, x):
         B, C, D, H, W = x.shape
         r = self.r
-        xp = F.pad(x, (0, 0, 0, 0, r, r), mode="replicate")               # z polstern
+        xp = F.pad(x, (0, 0, 0, 0, r, r), mode="replicate")               # pad z
         st = xp.unfold(2, 2 * r + 1, 1)                                   # (B, C, D, H, W, 2r+1)
         st = st.permute(0, 2, 1, 5, 3, 4).reshape(B * D, C * (2 * r + 1), H, W)
         pd = ((16 - H % 16) % 16, (16 - W % 16) % 16)
@@ -175,7 +175,7 @@ class ResSE(nn.Module):
 
 
 class ResSEUNet3D(nn.Module):
-    """Encoder mit je zwei ResSE-Bloecken (tiefer als das Doppel-Conv-U-Net), Decoder mit einem."""
+    """Encoder with two ResSE blocks each (deeper than the double-conv U-Net), decoder with one."""
     def __init__(self, nch, basis=32, tiefe=4):
         super().__init__()
         ch = [basis * 2 ** i for i in range(tiefe + 1)]
@@ -198,8 +198,8 @@ class ResSEUNet3D(nn.Module):
 
 # ---------------------------------------------------------------- a07: flach + dilatiert
 class FlachUNet3D(nn.Module):
-    """Zwei Poolingstufen (kleinstes Gitter 2x2x4 mm). Die Mitte erweitert das Sichtfeld mit
-    Dilatation 1/2/4 statt mit weiterem Herunterskalieren -- die Aufloesung bleibt erhalten."""
+    """Two pooling stages (smallest grid 2x2x4 mm). The middle expands the field of view with
+    dilation 1/2/4 instead of further downscaling -- the resolution is preserved."""
     def __init__(self, nch, basis=32):
         super().__init__()
         b = basis
@@ -222,9 +222,9 @@ class FlachUNet3D(nn.Module):
 
 # ---------------------------------------------------------------- MONAI-Netze
 def baue_nnunet(nch):
-    """DynUNet = die nnU-Net-Architektur in MONAI. Im Training liefert es (B, Koepfe, 1, D, H, W)
-    (Deep Supervision, alle Koepfe schon auf volle Groesse interpoliert); turnier.py gewichtet
-    die Koepfe 1, 1/2, 1/4. In eval() kommt nur der Hauptkopf."""
+    """DynUNet = the nnU-Net architecture in MONAI. In training it returns (B, heads, 1, D, H, W)
+    (deep supervision, all heads already interpolated to full size); turnier.py weights
+    the heads 1, 1/2, 1/4. In eval() only the main head comes out."""
     from monai.networks.nets import DynUNet
     n = DynUNet(spatial_dims=3, in_channels=nch, out_channels=1,
                 kernel_size=[3, 3, 3, 3, 3], strides=[1, 2, 2, 2, 2], upsample_kernel_size=[2, 2, 2, 2],
@@ -243,10 +243,10 @@ def baue_unetpp(nch):
 
 
 def baue_swin(nch):
-    """Swin-UNETR, feature_size 48 (so gross sind die vortrainierten Gewichte). Der vortrainierte
-    Encoder (selbstueberwacht auf 5050 CT, 1 Kanal) wird geladen, wenn die Datei da ist; die
-    Eingangsfaltung wird dann auf nch Kanaele verteilt (Gewicht / nch je Kanal). Ob geladen
-    wurde, steht in n.vortrainiert und landet in meta.json -- kein stilles Entweder-Oder."""
+    """Swin-UNETR, feature_size 48 (that's how big the pretrained weights are). The pretrained
+    encoder (self-supervised on 5050 CT, 1 channel) is loaded if the file is present; the
+    input convolution is then spread across nch channels (weight / nch per channel). Whether it was
+    loaded is recorded in n.vortrainiert and lands in meta.json -- no silent either/or."""
     from monai.networks.nets import SwinUNETR
     n = SwinUNETR(in_channels=nch, out_channels=1, feature_size=48, use_checkpoint=True, spatial_dims=3)
     geladen = 0
@@ -255,8 +255,8 @@ def baue_swin(nch):
         try:
             roh = torch.load(VORTRAINIERT_SWIN, map_location="cpu", weights_only=False)
             roh = roh.get("state_dict", roh)
-        except Exception as e:                              # halb geladene Datei (instabile Leitung)
-            print(f"Swin: vortrainierte Gewichte unlesbar ({type(e).__name__}) -- Start von null", flush=True)
+        except Exception as e:                              # half-loaded file (unstable connection)
+            print(f"Swin: pretrained weights unreadable ({type(e).__name__}) -- starting from scratch", flush=True)
             roh = {}
     if roh:
         eigen = n.swinViT.state_dict()
@@ -280,11 +280,11 @@ def baue_segres(nch):
     return Polster(n, (8, 8, 8))
 
 
-# ---------------------------------------------------------------- Register
+# ---------------------------------------------------------------- Registry
 
-# ---------------------------------------------------------------- Turnier 2 (29.09.2026): Breite, rekurrentes 2D-Netz, MedNeXt, nnU-Net mit Residual-Encoder
+# ---------------------------------------------------------------- Tournament 2 (29 Sep 2026): wide, recurrent 2D net, MedNeXt, nnU-Net with residual encoder
 class RekurrentBlock2D(nn.Module):
-    """R2U-Net-Baustein (Alom et al. 2018): Residual + rekurrente Faltung (t Wiederholungen mit geteilten Gewichten)."""
+    """R2U-Net building block (Alom et al. 2018): residual + recurrent convolution (t repetitions with shared weights)."""
     def __init__(self, ein, aus, t=2):
         super().__init__()
         self.t = t
@@ -323,14 +323,14 @@ class R2UNet2D(nn.Module):
 
 
 class ZweiEinhalbDR2(ZweiEinhalbD):
-    """a04 mit rekurrent-residualem 2D-U-Net (R2U-Net) statt des schlichten 2D-U-Nets."""
+    """a04 with a recurrent-residual 2D U-Net (R2U-Net) instead of the plain 2D U-Net."""
     def __init__(self, nch, r=2, basis=32):
         super().__init__(nch, r=r, basis=basis)
         self.netz = R2UNet2D(nch * (2 * r + 1), basis=basis, tiefe=4)
 
 
 def baue_mednext(nch):
-    """MedNeXt-S (Roy et al. 2023) aus MONAI 1.5: ConvNeXt-Bloecke im U-Net, Kern 3, ohne Deep Supervision."""
+    """MedNeXt-S (Roy et al. 2023) from MONAI 1.5: ConvNeXt blocks in the U-Net, kernel 3, without deep supervision."""
     from monai.networks.nets import MedNeXt
     n = MedNeXt(spatial_dims=3, init_filters=32, in_channels=nch, out_channels=1, encoder_expansion_ratio=2, decoder_expansion_ratio=2,
                 bottleneck_expansion_ratio=2, kernel_size=3, deep_supervision=False, use_residual_connection=True, blocks_down=(2, 2, 2, 2),
@@ -339,7 +339,7 @@ def baue_mednext(nch):
 
 
 def baue_nnunet_resenc(nch):
-    """Wie a02-nnunet (DynUNet), aber mit Residual-Bloecken im Encoder (nnU-Net ResEnc-Voreinstellung)."""
+    """Like a02-nnunet (DynUNet), but with residual blocks in the encoder (nnU-Net ResEnc preset)."""
     from monai.networks.nets import DynUNet
     n = DynUNet(spatial_dims=3, in_channels=nch, out_channels=1,
                 kernel_size=[3, 3, 3, 3, 3], strides=[1, 2, 2, 2, 2], upsample_kernel_size=[2, 2, 2, 2],
@@ -358,8 +358,8 @@ NETZE = {
     "a07-flach":   lambda nch: Polster(FlachUNet3D(nch), (4, 4, 4)),
     "a08-swin":    baue_swin,
     "a09-segres":  baue_segres,
-    "a11-anisoatt": lambda nch: Polster(AnisoUNet3D(nch, gates=True), (8, 16, 16)),   # Sieger + Attention-Gates
-    # Turnier 2 (29.09.2026)
+    "a11-anisoatt": lambda nch: Polster(AnisoUNet3D(nch, gates=True), (8, 16, 16)),   # winner + attention gates
+    # Tournament 2 (29 Sep 2026)
     "a03-aniso-b16": lambda nch: Polster(AnisoUNet3D(nch, basis=16), (8, 16, 16)),
     "a03-aniso-b48": lambda nch: Polster(AnisoUNet3D(nch, basis=48), (8, 16, 16)),
     "a13-r2unet2p5d": lambda nch: ZweiEinhalbDR2(nch, r=2),
@@ -376,12 +376,12 @@ if __name__ == "__main__":
     import sys, time
     torch.manual_seed(0)
     namen = sys.argv[1:] or list(NETZE)
-    x = torch.randn(1, 2, 38, 62, 94)                       # die echte (ungerade) Patchgroesse
+    x = torch.randn(1, 2, 38, 62, 94)                       # the real (odd) patch size
     for name in namen:
         t0 = time.time()
         m = NETZE[name](2).train()
         y = m(x)
-        if y.dim() == 6:                                    # Deep Supervision
+        if y.dim() == 6:                                    # deep supervision
             assert y.shape[2:] == (1, 38, 62, 94), (name, y.shape)
             y.mean().backward()
             y = m.eval()(x)
@@ -389,6 +389,6 @@ if __name__ == "__main__":
             y.mean().backward()
         assert y.shape == (1, 1, 38, 62, 94), (name, y.shape)
         ohne_grad = [n for n, p in m.named_parameters() if p.requires_grad and p.grad is None]
-        print(f"{name:12s} {parameterzahl(m) / 1e6:6.2f} Mio Parameter, Ausgabe {tuple(y.shape)}, "
-              f"ohne Gradient {len(ohne_grad)}, vortrainiert {getattr(m, 'vortrainiert', '-')}, "
+        print(f"{name:12s} {parameterzahl(m) / 1e6:6.2f} M parameters, output {tuple(y.shape)}, "
+              f"without gradient {len(ohne_grad)}, pretrained {getattr(m, 'vortrainiert', '-')}, "
               f"{time.time() - t0:.1f}s", flush=True)

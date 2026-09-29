@@ -1,16 +1,16 @@
-"""Erzeugt die Referenz-Landmarken fuer `turnier.py --norm landmarken`.
+"""Creates the reference landmarks for `turnier.py --norm landmarken`.
 
-Warum getrennt und als Datei: die Angleichung braucht ein FESTES Ziel, das bei Training und Vorhersage identisch ist --
-auch fuer eine fremde Kohorte, die spaeter dazukommt. Eine Datei laesst sich mitliefern und pruefen; eine im Code
-ausgerechnete Referenz waere still von den gerade geladenen Faellen abhaengig.
+Why separate and as a file: the alignment needs a FIXED target that is identical for training and prediction --
+even for a foreign cohort added later. A file can be shipped and checked; a reference computed
+in code would silently depend on the cases just loaded.
 
     python code/landmarken_bauen.py --gitter dev/gitter_d --aus dev/landmarken_valdo.json
 
-WAS HIER OFFENGELEGT WERDEN MUSS: die Referenz ist der Median der Fall-Perzentile ueber die angegebenen Faelle. Nimmt
-man dafuer die 57 Kreuzvalidierungs-Faelle, fliesst die Intensitaetsverteilung JEDES Falles zu 1/57 in die Skala ein,
-mit der er spaeter auch vorhergesagt wird. Es sind reine Intensitaets-Perzentile, keine Etiketten -- der uebliche Weg
-in der Literatur und ein sehr kleiner Einfluss, aber ein Einfluss. Wer das ausschliessen will, baut die Referenz je
-Falte aus deren Trainingsfaellen (`--faelle` mit der jeweiligen Liste) und uebergibt sie mit `--landmarken`.
+WHAT MUST BE DISCLOSED HERE: the reference is the median of the per-case percentiles over the given cases. If
+one uses the 57 cross-validation cases for this, the intensity distribution of EVERY case flows with weight 1/57 into the scale
+with which it is later also predicted. These are pure intensity percentiles, not labels -- the usual approach
+in the literature and a very small influence, but an influence. Anyone who wants to rule this out builds the reference per
+fold from its training cases (`--faelle` with the respective list) and passes it with `--landmarken`.
 """
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ from turnier import LANDMARKEN_PERZENTILE, landmarken_bestimmen     # noqa: E402
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--gitter", required=True, help="Ordner mit <id>/<id>_image.nii.gz")
-    p.add_argument("--faelle", nargs="*", help="nur diese Kennungen (Vorgabe: alle im Gitter)")
+    p.add_argument("--gitter", required=True, help="Folder with <id>/<id>_image.nii.gz")
+    p.add_argument("--faelle", nargs="*", help="only these IDs (default: all in the grid)")
     p.add_argument("--aus", required=True)
     a = p.parse_args()
     gitter = a.gitter if os.path.isabs(a.gitter) else f"{ROOT}/{a.gitter}"
@@ -42,14 +42,14 @@ def main() -> None:
         if os.path.exists(pfad):
             bilder.append(np.asarray(nib.load(pfad).dataobj).astype(np.float32))
     if not bilder:
-        raise SystemExit(f"keine Bilder in {gitter}")
+        raise SystemExit(f"no images in {gitter}")
     werte = landmarken_bestimmen(bilder)
     aus = a.aus if os.path.isabs(a.aus) else f"{ROOT}/{a.aus}"
     json.dump(dict(perzentile=list(LANDMARKEN_PERZENTILE), landmarken=[round(float(v), 6) for v in werte],
                    gitter=gitter, n_faelle=len(bilder), faelle=sorted(ids) if a.faelle else "alle"),
               open(aus, "w"), indent=1)
-    print(f"{len(bilder)} Faelle -> Landmarken " + "  ".join(f"P{q}={v:.4f}" for q, v in zip(LANDMARKEN_PERZENTILE, werte)))
-    print("geschrieben nach", aus)
+    print(f"{len(bilder)} cases -> landmarks " + "  ".join(f"P{q}={v:.4f}" for q, v in zip(LANDMARKEN_PERZENTILE, werte)))
+    print("written to", aus)
 
 
 if __name__ == "__main__":

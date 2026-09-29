@@ -141,39 +141,39 @@ def main() -> None:
         tp_total += len(getroffen); fn_total += n_ref - len(getroffen)
 
     n_seeds_max = len(seeds)
-    print(f"Gemeldeter Lauf an der festen Zelle: {tp_total} Treffer, {fp_total} Fehlalarme, {fn_total} uebersehen "
+    print(f"Reported run at the fixed cell: {tp_total} hits, {fp_total} false alarms, {fn_total} missed "
           f"-> F1 {f1_of(tp_total, fp_total, fn_total):.3f}\n")
 
     shiva_fp = sum(r["shiva"] for r in falsch)
     shiva_tp = sum(r["shiva"] for r in treffer)
     shiva_fn = sum(r["shiva"] for r in verpasst)
-    print("1) Unabhaengiges Verfahren (SHIVA-CMB)")
-    print(f"   von {len(treffer)} Treffern bestaetigt SHIVA {shiva_tp} ({shiva_tp / max(len(treffer),1):.0%})  <- so oft sind sich beide einig, wenn die Referenz zustimmt")
-    print(f"   von {fp_total} Fehlalarmen findet SHIVA {shiva_fp} ({shiva_fp / max(fp_total,1):.0%})  <- Kandidaten fuer uebersehene Annotationen")
-    print(f"   von {fn_total} uebersehenen Referenz-Blutungen findet SHIVA {shiva_fn} ({shiva_fn / max(fn_total,1):.0%})  <- die haben WIR verpasst, nicht die Referenz")
-    print(f"   von keinem der beiden gefunden: {fn_total - shiva_fn} Referenz-Blutungen")
+    print("1) Independent method (SHIVA-CMB)")
+    print(f"   of {len(treffer)} hits SHIVA confirms {shiva_tp} ({shiva_tp / max(len(treffer),1):.0%})  <- how often the two agree, when the reference agrees too")
+    print(f"   of {fp_total} false alarms SHIVA finds {shiva_fp} ({shiva_fp / max(fp_total,1):.0%})  <- candidates for missed annotations")
+    print(f"   of {fn_total} missed reference microbleeds SHIVA finds {shiva_fn} ({shiva_fn / max(fn_total,1):.0%})  <- WE missed those, not the reference")
+    print(f"   found by neither: {fn_total - shiva_fn} reference microbleeds")
     if n_seeds_max:
-        print(f"\n2) Uebereinstimmung ueber {n_seeds_max + 1} Startwerte desselben Rezepts")
-        for name, rows in (("Treffer", treffer), ("Fehlalarme", falsch), ("uebersehen", verpasst)):
+        print(f"\n2) Agreement across {n_seeds_max + 1} seeds of the same recipe")
+        for name, rows in (("hits", treffer), ("false alarms", falsch), ("missed", verpasst)):
             z = Counter(r["n_seeds"] for r in rows)
-            print(f"   {name:12s} von weiteren Startwerten bestaetigt: " + ", ".join(f"{k} von {n_seeds_max}: {z.get(k,0)}" for k in range(n_seeds_max + 1)))
+            print(f"   {name:12s} confirmed by further seeds: " + ", ".join(f"{k} of {n_seeds_max}: {z.get(k,0)}" for k in range(n_seeds_max + 1)))
         alle = sum(1 for r in falsch if r["n_seeds"] == n_seeds_max)
         beides = sum(1 for r in falsch if r["n_seeds"] == n_seeds_max and r["shiva"])
-        print(f"   -> {alle} Fehlalarme finden ALLE Startwerte, davon {beides} auch SHIVA")
+        print(f"   -> {alle} false alarms are found by ALL seeds, of which {beides} also by SHIVA")
 
-    print("\n3) Sehen die Fehlalarme aus wie echte Blutungen?")
-    for name, rows in (("Treffer", treffer), ("Fehlalarme", falsch)):
+    print("\n3) Do the false alarms look like real microbleeds?")
+    for name, rows in (("hits", treffer), ("false alarms", falsch)):
         if not rows:
             continue
         v = np.array([r["voxels"] for r in rows]); p = np.array([r["probability"] for r in rows])
         orte = Counter(r["region"] for r in rows)
-        print(f"   {name:12s} n={len(rows):3d}  Groesse {np.median(v):4.0f} Voxel [{np.percentile(v,25):.0f}; {np.percentile(v,75):.0f}]  "
-              f"Wahrscheinlichkeit {np.median(p):.2f}  Ort " + ", ".join(f"{k} {n}" for k, n in orte.most_common(4)))
+        print(f"   {name:12s} n={len(rows):3d}  size {np.median(v):4.0f} voxels [{np.percentile(v,25):.0f}; {np.percentile(v,75):.0f}]  "
+              f"probability {np.median(p):.2f}  location " + ", ".join(f"{k} {n}" for k, n in orte.most_common(4)))
 
     korrigiert = f1_of(tp_total + shiva_fp, fp_total - shiva_fp, fn_total)
-    print(f"\nSpannweite des F1: gemessen {f1_of(tp_total, fp_total, fn_total):.3f}; "
-          f"wenn JEDER von SHIVA bestaetigte Fehlalarm eine echte Blutung waere: {korrigiert:.3f} "
-          f"(Obergrenze dessen, was dieser Ersatz rechtfertigt -- kein Schaetzwert)")
+    print(f"\nRange of the F1: measured {f1_of(tp_total, fp_total, fn_total):.3f}; "
+          f"if EVERY false alarm confirmed by SHIVA were a real microbleed: {korrigiert:.3f} "
+          f"(upper bound of what this substitution justifies -- not an estimate)")
     if args.json:
         json.dump(dict(run=run, seeds=seeds, shiva=args.shiva,
                        measured=dict(tp=tp_total, fp=fp_total, fn=fn_total, f1=round(f1_of(tp_total, fp_total, fn_total), 3)),

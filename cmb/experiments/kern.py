@@ -1,6 +1,6 @@
-"""The core experiments of the CMB line as ONE repeatable script (user request 2026-09-29; source of truth: REPLIKATION.md).
+"""The core experiments of the CMB line as ONE repeatable script (user request 2026-09-29; source of truth: REPLICATION.md).
 
-Each step is the literal command that produced the number in ARBEIT.md / MASTERARBEIT-KERN.md. Steps are idempotent where the
+Each step is the literal command that produced the number in WORKLOG.md / THESIS-CORE.md. Steps are idempotent where the
 underlying tools are (grids and candidates skip existing cases; trainings are NOT re-run if the run folder has 5 folds).
 GPU steps must run through ``grossauftrag --vram 20`` (the language model is stopped for them); ``--queue`` enqueues them
 instead of running. Private paths (mb-arena) stay on this machine.
@@ -83,7 +83,7 @@ STEPS = [
    f"{PY} -m cmb.baselines.microbleednet_finetune score --cohort valdo", "fair baseline: same cases, same folds, same metric"),
   ("qc-viewer",       False, lambda: os.path.exists(f"{ROOT}/ergebnisse/qc/valdo_slices/betrachter.html"),
    f'{PY} -m cmb.review.build_slice_viewer --dataset VALDO --manifest {MAN} --run basis={T}/ens2-a03-aniso-e60-gd "basis+liquor={T}/ens2-a03-aniso-e60-gd:csf" '
-   f'--synthseg "{SYN}" --out ergebnisse/qc/valdo_slices --single-file 480 --info "basis=two-seed ensemble of the anisotropic 3D U-Net, cell 0.3 / 2 mm3" '
+   f'--synthseg "{SYN}" --out ergebnisse/qc/valdo_slices --single-file 20 --info "basis=two-seed ensemble of the anisotropic 3D U-Net, cell 0.3 / 2 mm3" '
    f'"basis+liquor=same, plus the SynthSeg CSF rule (deliverable)"',
    "slice viewer: reference left, model outlines right, scroll = z (published at mendeltem.github.io/valdo-cmb-qc/slices/)"),
 ]

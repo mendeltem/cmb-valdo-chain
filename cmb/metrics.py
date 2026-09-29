@@ -18,7 +18,7 @@ so one blob over the whole brain would score well. The size guard in the fixed p
 published numbers: 6-connectivity, threshold 0.5, and a ONE-TO-ONE match when the centres of mass are less than
 5 mm apart. Stricter, and it punishes exactly the blob case above.
 
-The two are not comparable. Section 11 of ARBEIT.md lists "F1" among the terms that must never be mixed: pooled
+The two are not comparable. Section 11 of WORKLOG.md lists "F1" among the terms that must never be mixed: pooled
 touch-rule F1 at the fixed operating point is the default in this project; per-subject VALDO F1 is reported
 separately for the comparison with the challenge and with CenSynCMB.
 """
@@ -61,7 +61,7 @@ def hits(reference, prediction) -> Dict[str, int]:
 def summarize(rows: Sequence[Dict]) -> Dict:
     """Pools the per-case counts of ``hits``. Pooled, not averaged: a case with 112 lesions weighs 112 times a case
     with one. That is the project's ranking measure; the per-subject average is reported separately because the two
-    differ by up to 0.06 (ARBEIT.md 5j)."""
+    differ by up to 0.06 (WORKLOG.md 5j)."""
     total = {k: int(sum(r[k] for r in rows)) for k in ("n_ref", "n_pred", "tp", "fp", "fn")}
     n = len(rows)
     precision = total["tp"] / max(total["tp"] + total["fp"], 1)

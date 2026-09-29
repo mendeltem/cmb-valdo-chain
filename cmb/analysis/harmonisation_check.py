@@ -1,7 +1,7 @@
 """Which intensity normalisation actually brings the cohorts together? -- measured, without training anything.
 
 Why (2026-09-23, user question): transfer between our cohorts fails on the IMAGES, not on the annotation style
-(ARBEIT.md 5n). The brain level differs (0.52 against 0.71 on the inverted scale), the lesion contrast differs, and
+(WORKLOG.md 5n). The brain level differs (0.52 against 0.71 on the inverted scale), the lesion contrast differs, and
 the percentile scale p99.5 turned out not to close the gap (5aa) -- three CPU minutes that saved two GPU hours.
 The same pre-check can be run for every other candidate before anyone trains a network with it.
 
@@ -62,10 +62,10 @@ def normalise(kind: str, image: np.ndarray, brain: np.ndarray, wm: np.ndarray, r
         return image / max(werte.max(), 1e-6)
     if kind == "p995":
         return image / max(np.percentile(werte, 99.5), 1e-6)
-    if kind == "minmax":                     # echte 0-1-Skala: dunkelstes Hirnvoxel -> 0, hellstes -> 1
+    if kind == "minmax":                     # a real 0-1 scale: darkest brain voxel -> 0, brightest -> 1
         lo, hi = werte.min(), werte.max()
         return (image - lo) / max(hi - lo, 1e-6)
-    if kind == "p1_p99":                     # robuste 0-1-Skala: nicht die Extremwerte, sondern das 1. und 99. Perzentil
+    if kind == "p1_p99":                     # robust 0-1 scale: not the extreme values but the 1st and 99th percentile
         lo, hi = np.percentile(werte, [1, 99])
         return np.clip((image - lo) / max(hi - lo, 1e-6), 0.0, 1.0)
     if kind == "z":
@@ -78,16 +78,16 @@ def normalise(kind: str, image: np.ndarray, brain: np.ndarray, wm: np.ndarray, r
         return image / max(anker, 1e-6)
     if kind == "landmarks":
         quellen = np.percentile(werte, LANDMARKS)
-        return np.interp(image, quellen, referenz)          # ausserhalb der Landmarken: konstant fortgesetzt
+        return np.interp(image, quellen, referenz)          # outside the landmarks: continued constant
     raise ValueError(kind)
 
 
 def bloecke(label: np.ndarray) -> List:
-    """Bounding-Box je Blutung, einmal vorab -- der Ring wird NUR darin gerechnet.
+    """Bounding box per microbleed, once in advance -- the ring is computed ONLY inside it.
 
-    Ohne das dilatiert man je Blutung und je Normierung ueber das ganze Volumen (292 x 341 x 140): bei drei Kohorten
-    und sechs Verfahren sind das tausende Vollvolumen-Dilatationen, und der Lauf braucht Stunden statt Minuten
-    (selbst gemacht und nach 42 min abgebrochen, 2026-09-23 -- derselbe Fehler wie tags zuvor in label_noise_proxies).
+    Without this, one dilates per microbleed and per normalisation over the whole volume (292 x 341 x 140): with three cohorts
+    and six methods that is thousands of full-volume dilations, and the run takes hours instead of minutes
+    (done myself and aborted after 42 min, 2026-09-23 -- the same mistake as the day before in label_noise_proxies).
     """
     l, n = ndimage.label(label, structure=CONNECTIVITY_26)
     aus = []
@@ -98,7 +98,7 @@ def bloecke(label: np.ndarray) -> List:
 
 
 def kennzahlen(bild: np.ndarray, brain: np.ndarray, blocks: List) -> List[Dict]:
-    """-> je Blutung: Hirn-Niveau, Hirn-Streuung, Laesionsniveau, Kontrast gegen einen Ring 1-3 mm um sie herum."""
+    """-> per microbleed: brain level, brain spread, lesion level, contrast against a ring 1-3 mm around it."""
     werte = bild[brain]
     q1, q3 = np.percentile(werte, [25, 75])
     niveau, streuung = float(np.median(werte)), float(q3 - q1)
@@ -116,9 +116,9 @@ def kennzahlen(bild: np.ndarray, brain: np.ndarray, blocks: List) -> List[Dict]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--cohort", nargs="+", required=True, help="NAME=MANIFEST")
-    parser.add_argument("--synthseg", nargs="*", default=[], help="NAME=MUSTER mit {id} oder {sid}; ohne das faellt 'wm' aus")
-    parser.add_argument("--reference", help="Kohorte, auf deren Landmarken abgebildet wird (Vorgabe: die erste)")
-    parser.add_argument("--cases", type=int, default=20, help="Faelle je Kohorte (die ersten mit Blutung)")
+    parser.add_argument("--synthseg", nargs="*", default=[], help="NAME=PATTERN with {id} or {sid}; without it 'wm' is skipped")
+    parser.add_argument("--reference", help="Cohort onto whose landmarks the mapping is done (default: the first)")
+    parser.add_argument("--cases", type=int, default=20, help="Cases per cohort (the first ones with a microbleed)")
     parser.add_argument("--json")
     args = parser.parse_args()
     absolute = lambda p: p if os.path.isabs(p) else f"{ROOT}/{p}"
@@ -126,7 +126,7 @@ def main() -> None:
     muster = dict(spec.split("=", 1) for spec in args.synthseg)
     referenz_name = args.reference or list(kohorten)[0]
 
-    # 1) Daten einmal laden
+    # 1) load the data once
     geladen: Dict[str, List] = {}
     for name, manifest in kohorten.items():
         eintraege = json.load(open(absolute(manifest)))
@@ -147,18 +147,18 @@ def main() -> None:
                 if os.path.exists(pfad):
                     seg = load_synthseg(pfad, nib.load(f"{d}/{cid}_image.nii.gz"))
                     wm = np.isin(seg, list(WM_LABELS)) & brain
-            genommen.append((bild, brain, wm, bloecke(label)))   # Bloecke einmal je Fall, nicht je Normierung
+            genommen.append((bild, brain, wm, bloecke(label)))   # blocks once per case, not per normalisation
         geladen[name] = genommen
-        print(f"{name}: {len(genommen)} Faelle mit Blutung geladen"
-              + ("" if name in muster else "  (ohne Gewebekarte -- 'wm' entfaellt)"), flush=True)
+        print(f"{name}: {len(genommen)} cases with a microbleed loaded"
+              + ("" if name in muster else "  (no tissue map -- 'wm' is skipped)"), flush=True)
 
-    # 2) Landmarken der Referenzkohorte
+    # 2) landmarks of the reference cohort
     referenz = np.median([np.percentile(b[br], LANDMARKS) for b, br, _, _ in geladen[referenz_name]], axis=0)
 
     verfahren = ["max", "p995", "minmax", "p1_p99", "z", "median_iqr", "landmarks"] + (["wm"] if muster else [])
     aus: Dict = dict(cohorts=list(kohorten), reference=referenz_name, cases=args.cases, methods={})
-    print(f"\nLandmarken der Referenz ({referenz_name}, Perzentile {LANDMARKS}): " + " ".join(f"{v:.3f}" for v in referenz))
-    print(f"\n{'Verfahren':12s} {'Kohorte':16s} {'Hirn-Niveau':>12s} {'Hirn-Streuung':>14s} {'Laesion':>9s} {'Kontrast':>9s}")
+    print(f"\nLandmarks of the reference ({referenz_name}, percentiles {LANDMARKS}): " + " ".join(f"{v:.3f}" for v in referenz))
+    print(f"\n{'method':12s} {'cohort':16s} {'brain level':>12s} {'brain spread':>14s} {'lesion':>9s} {'contrast':>9s}")
     for kind in verfahren:
         je_kohorte = {}
         for name, faelle in geladen.items():
@@ -176,11 +176,11 @@ def main() -> None:
         spanne = {s: max(v[s] for v in je_kohorte.values()) - min(v[s] for v in je_kohorte.values())
                   for s in ("niveau", "streuung", "laesion", "kontrast")}
         aus["methods"][kind] = dict(per_cohort=je_kohorte, spread=spanne)
-        print(f"{'':12s} {'-> Spanne':16s} {spanne['niveau']:12.3f} {spanne['streuung']:14.3f} {spanne['laesion']:9.3f} {spanne['kontrast']:9.3f}\n")
+        print(f"{'':12s} {'-> spread':16s} {spanne['niveau']:12.3f} {spanne['streuung']:14.3f} {spanne['laesion']:9.3f} {spanne['kontrast']:9.3f}\n")
 
-    print("Kleinere Spanne = besser angeglichen. Die Spalte KONTRAST ist die wichtigste: sie ist das, was das Netz erkennt.")
+    print("Smaller spread = better harmonised. The CONTRAST column is the most important one: it is what the network detects.")
     bester = min(aus["methods"], key=lambda k: aus["methods"][k]["spread"]["kontrast"])
-    print(f"Kleinste Kontrast-Spanne: {bester} ({aus['methods'][bester]['spread']['kontrast']:.3f}); heute benutzt: max "
+    print(f"Smallest contrast spread: {bester} ({aus['methods'][bester]['spread']['kontrast']:.3f}); used today: max "
           f"({aus['methods']['max']['spread']['kontrast']:.3f}).")
     if args.json:
         json.dump(aus, open(absolute(args.json), "w"), indent=1)

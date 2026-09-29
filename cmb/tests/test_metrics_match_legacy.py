@@ -1,11 +1,11 @@
-"""Prueft, dass `cmb.metrics` die Altfassungen `code/metric.py` und `code/metric_valdo.py` EXAKT reproduziert.
+"""Checks that `cmb.metrics` reproduces the legacy versions `code/metric.py` and `code/metric_valdo.py` EXACTLY.
 
-Abnahmeregel des Pakets (cmb/README.md): ein Modul gilt erst, wenn es seinen Vorgaenger exakt reproduziert. Hier
-heisst das: gleiche Zaehlungen auf Zufallsmasken UND auf echten Daten, und gleiche Zuordnung bei der VALDO-Regel.
+Acceptance rule of the package (cmb/README.md): a module only counts once it reproduces its predecessor exactly. Here
+that means: the same counts on random masks AND on real data, and the same matching under the VALDO rule.
 
     python -m cmb.tests.test_metrics_match_legacy
 
-Rueckgabe 0 wenn alles stimmt, 1 bei der ersten Abweichung (mit dem Fall, der sie ausloest).
+Returns 0 if everything matches, 1 at the first deviation (with the case that triggers it).
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ from cmb import metrics as neu                # noqa: E402
 
 
 def zufallsmasken(rng, form=(40, 50, 50), n=12):
-    """Masken mit realistischer Struktur: wenige kleine Klumpen, nicht Rauschen -- sonst zerfaellt alles in
-    Tausende Komponenten und der Vergleich prueft nur noch die Zaehlschleife."""
+    """Masks with realistic structure: a few small clumps, not noise -- otherwise everything falls apart into
+    thousands of components and the comparison only tests the counting loop anymore."""
     for _ in range(n):
         a = np.zeros(form, bool); b = np.zeros(form, bool)
         for ziel, k in ((a, rng.integers(0, 6)), (b, rng.integers(0, 8))):
@@ -38,8 +38,8 @@ def zufallsmasken(rng, form=(40, 50, 50), n=12):
 
 
 def f1_gleich(alt, neu_wert) -> bool:
-    """Vergleicht f1 tolerant gegen zwei bewusste Unterschiede: die Altfassung rundet auf vier Stellen, und fuer
-    Faelle OHNE Referenz-Blutung liefert sie None statt nan (beide heissen 'nicht definiert')."""
+    """Compares f1 tolerantly against two deliberate differences: the legacy version rounds to four digits, and for
+    cases WITHOUT a reference microbleed it returns None instead of nan (both mean 'undefined')."""
     import math
     undefiniert = lambda v: v is None or (isinstance(v, float) and math.isnan(v))
     if undefiniert(alt) or undefiniert(neu_wert):
@@ -51,40 +51,40 @@ def main() -> int:
     fehler = 0
     rng = np.random.default_rng(0)
 
-    # --- 1) Beruehrungsregel auf Zufallsmasken
+    # --- 1) touch rule on random masks
     for i, (ref, pred) in enumerate(zufallsmasken(rng, n=40)):
         a, b = alt_touch.hits(ref, pred), neu.hits(ref, pred)
         if a != b:
-            print(f"ABWEICHUNG hits, Zufallsfall {i}: alt {a} gegen neu {b}"); fehler += 1; break
+            print(f"DEVIATION hits, random case {i}: old {a} vs new {b}"); fehler += 1; break
     else:
-        print("hits auf 40 Zufallsmasken: identisch")
+        print("hits on 40 random masks: identical")
 
-    # --- 2) summarize auf denselben Zeilen
+    # --- 2) summarize on the same rows
     zeilen = [neu.hits(r, p) for r, p in zufallsmasken(np.random.default_rng(1), n=25)]
     a, b = alt_touch.summarize(zeilen), neu.summarize(zeilen)
     if a != b:
-        print(f"ABWEICHUNG summarize: alt {a} gegen neu {b}"); fehler += 1
+        print(f"DEVIATION summarize: old {a} vs new {b}"); fehler += 1
     else:
-        print("summarize auf 25 Faellen: identisch")
+        print("summarize on 25 cases: identical")
 
-    # --- 3) VALDO-Regel: Zuordnung und Zaehlung
+    # --- 3) VALDO rule: matching and counting
     for i, (ref, pred) in enumerate(zufallsmasken(np.random.default_rng(2), n=30)):
         a = alt_valdo.case_valdo(ref, pred.astype(np.float32), (0.5, 0.5, 1.0))
         b = neu.case_valdo(ref, pred.astype(np.float32), (0.5, 0.5, 1.0))
-        # Die Altfassung rundet f1 auf vier Stellen und liefert Zusatzfelder (match_dist_mm_max, multi_hit, m26_*),
-        # die nur ihr eigenes Kommandozeilenprogramm benutzt. Verglichen werden die gemeinsamen Felder; f1 mit
-        # derselben Rundung -- die neue Fassung rundet absichtlich NICHT, das gehoert in die Berichtsschicht.
+        # The legacy version rounds f1 to four digits and returns extra fields (match_dist_mm_max, multi_hit, m26_*),
+        # which only its own command-line program uses. The shared fields are compared; f1 with
+        # the same rounding -- the new version deliberately does NOT round, that belongs in the reporting layer.
         gleich = all(a[k] == b[k] for k in ("n_ref", "n_pred", "tp", "fp", "fn", "aed")) and f1_gleich(a["f1"], b["f1"])
         if not gleich:
-            print(f"ABWEICHUNG case_valdo, Zufallsfall {i}: alt {a} gegen neu {b}"); fehler += 1; break
+            print(f"DEVIATION case_valdo, random case {i}: old {a} vs new {b}"); fehler += 1; break
     else:
-        print("case_valdo auf 30 Zufallsmasken: identisch")
+        print("case_valdo on 30 random masks: identical")
 
-    # --- 4) echte Daten: Referenz gegen eine echte Vorhersage
+    # --- 4) real data: reference against a real prediction
     gitter, lauf = f"{ROOT}/dev/gitter_d", f"{ROOT}/ergebnisse/turnier/a03-aniso-e60-gd"
     pfade = sorted(glob.glob(f"{lauf}/fold[0-9]/*_pred_proba.nii.gz"))[:8]
     if not pfade:
-        print("echte Daten: uebersprungen (keine Vorhersagen vorhanden)")
+        print("real data: skipped (no predictions available)")
     else:
         import nibabel as nib
         n_gleich = 0
@@ -93,15 +93,15 @@ def main() -> int:
             p = np.asarray(nib.load(pfad).dataobj).astype(np.float32) / 255.0
             ref = np.asarray(nib.load(f"{gitter}/{fall}/{fall}_label.nii.gz").dataobj) > 0
             if alt_touch.hits(ref, p > 0.3) != neu.hits(ref, p > 0.3):
-                print(f"ABWEICHUNG hits auf echtem Fall {fall}"); fehler += 1; break
+                print(f"DEVIATION hits on real case {fall}"); fehler += 1; break
             a, b = alt_valdo.case_valdo(ref, p, (0.5, 0.5, 1.0)), neu.case_valdo(ref, p, (0.5, 0.5, 1.0))
             if not all(a[k] == b[k] for k in ("tp", "fp", "fn", "aed")):
-                print(f"ABWEICHUNG case_valdo auf echtem Fall {fall}: alt {a} gegen neu {b}"); fehler += 1; break
+                print(f"DEVIATION case_valdo on real case {fall}: old {a} vs new {b}"); fehler += 1; break
             n_gleich += 1
         else:
-            print(f"echte Daten: {n_gleich} Faelle, beide Regeln identisch")
+            print(f"real data: {n_gleich} cases, both rules identical")
 
-    print("\nalles identisch" if not fehler else f"\n{fehler} Abweichung(en)")
+    print("\nall identical" if not fehler else f"\n{fehler} deviation(s)")
     return 1 if fehler else 0
 
 

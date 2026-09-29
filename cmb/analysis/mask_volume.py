@@ -1,6 +1,6 @@
 """How tight is the delivered brain mask?  Mask volume per VALDO cohort and the share of it that is not brain.
 
-Finding of 2026-09-19 (ARBEIT.md 4.2): VALDO ships "masked" images, but only cohort 1 is skull-stripped; cohort 3 keeps
+Finding of 2026-09-19 (WORKLOG.md 4.2): VALDO ships "masked" images, but only cohort 1 is skull-stripped; cohort 3 keeps
 eyes, skull base and scalp. Measured here exactly as then:
   mask        = image != 0 on the training grid
   volume      = voxels x voxel volume, in ml

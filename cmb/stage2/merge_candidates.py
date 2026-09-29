@@ -1,6 +1,6 @@
 """Merge the candidate sets of several first stages into their UNION -- one candidate per location.
 
-Why (2026-09-22, ARBEIT.md 5w): the second stage can only reject candidates, never invent a missed lesion, so the ceiling of
+Why (2026-09-22, WORKLOG.md 5w): the second stage can only reject candidates, never invent a missed lesion, so the ceiling of
 the whole chain is the candidate step. Measured with ``cmb.analysis.candidate_ceiling``: three seeds of the SAME recipe reach
 112 / 103 / 112 of 139 reference lesions at threshold 0.05 -- but their UNION reaches 120, because different seeds miss
 different lesions. Averaging the probability maps (``cmb.analysis.ensemble``) cannot use this: the mean damps what only one
@@ -43,7 +43,7 @@ def main() -> None:
     parser.add_argument("--min-runs", type=int, default=1,
                         help="keep only locations that at least this many input runs found. 1 = the full union. Measured on VALDO "
                              "(2026-09-23): 1 -> 703 candidates, 581 false, 120 lesions reached; 2 -> 325 / 213 / 110; 3 -> 209 / 109 / 98. "
-                             "The full union LOWERED the chain (-0.039, ARBEIT.md 5y): the 378 locations only one run sees are mostly that "
+                             "The full union LOWERED the chain (-0.039, WORKLOG.md 5y): the 378 locations only one run sees are mostly that "
                              "run's own errors. min-runs 2 keeps most of the ceiling for a candidate count the classifier handles.")
     args = parser.parse_args()
     if len(args.input) < 2:
@@ -57,14 +57,14 @@ def main() -> None:
         folder = absolute(folder)
         info = json.load(open(f"{folder}/candidates.json"))
         sets.append((os.path.basename(folder), info, np.load(f"{folder}/patches.npy", mmap_mode="r")))
-        print(f"{os.path.basename(folder)}: {len(info['candidates'])} Kandidaten, "
-              f"{sum(bool(r['touched']) for r in info['candidates'])} auf einer Blutung", flush=True)
+        print(f"{os.path.basename(folder)}: {len(info['candidates'])} candidates, "
+              f"{sum(bool(r['touched']) for r in info['candidates'])} on a microbleed", flush=True)
     base = sets[0][1]
     for name, info, _ in sets[1:]:
         if info["cases"] != base["cases"]:
-            raise SystemExit(f"{name}: andere Faelle oder Falten als {sets[0][0]} -- die Mengen muessen vergleichbar sein")
+            raise SystemExit(f"{name}: different cases or folds than {sets[0][0]} -- the sets must be comparable")
         if info["threshold"] != base["threshold"]:
-            print(f"WARNUNG: {name} hat Schwelle {info['threshold']}, {sets[0][0]} hat {base['threshold']}", flush=True)
+            print(f"WARNING: {name} has threshold {info['threshold']}, {sets[0][0]} has {base['threshold']}", flush=True)
 
     # group per case: greedy, highest probability first -- so the representative of a group is always its strongest member
     by_case: Dict[str, List[tuple]] = defaultdict(list)
@@ -82,7 +82,7 @@ def main() -> None:
         for _, s, i, row in entries:
             centre = np.asarray(row["centre_voxel"], float) if "centre_voxel" in row else None
             if centre is None:
-                raise SystemExit("die Kandidatendateien tragen kein centre_voxel -- mit der heutigen candidates.py neu bauen")
+                raise SystemExit("the candidate files carry no centre_voxel -- rebuild with the current candidates.py")
             hit = None
             for g, c in enumerate(centres):
                 if np.all(np.abs((centre - c) * VOXEL_MM) <= args.radius):
@@ -112,11 +112,11 @@ def main() -> None:
     reachable = sum(len({t for r in rows if r["case"] == c for t in r["touched"]}) for c in base["cases"])
     total = sum(v["n_reference"] for v in base["cases"].values())
     einzeln = [sum(1 for r in rows if r["n_runs"] == k) for k in range(1, len(sets) + 1)]
-    print(f"\n{groups_total} Kandidaten nach dem Zusammenfuehren ({merged_total} Doppelnennungen entfernt); "
-          f"{positives} auf einer Blutung, {groups_total - positives} falsch")
-    print("gefunden von genau k Laeufen: " + ", ".join(f"k={k}: {n}" for k, n in enumerate(einzeln, 1)))
-    print(f"erreicht {reachable} von {total} Referenz-Blutungen = Obergrenze der Sensitivitaet {reachable / total:.3f}")
-    print("geschrieben nach", out)
+    print(f"\n{groups_total} candidates after merging ({merged_total} duplicate mentions removed); "
+          f"{positives} on a microbleed, {groups_total - positives} false")
+    print("found by exactly k runs: " + ", ".join(f"k={k}: {n}" for k, n in enumerate(einzeln, 1)))
+    print(f"reached {reachable} of {total} reference microbleeds = upper bound of sensitivity {reachable / total:.3f}")
+    print("written to", out)
 
 
 if __name__ == "__main__":

@@ -108,7 +108,7 @@ def crosscheck(pfad, n=200, seed=0):
         pred = (rng.random(shape) < rng.choice([0.0, 0.02, 0.1])).astype(np.uint8)
         a0 = orig.treffer(ref, pred); b = hits(ref, pred)
         a = {umbenannt.get(k, k): v for k, v in a0.items()}
-        assert a == b, f"Lauf {i}, shape {shape}: Original {a} != Uebersetzung {b}"
+        assert a == b, f"run {i}, shape {shape}: original {a} != translation {b}"
         rows_a.append(a0); rows_b.append(b)
     # summarize() vs zusammenfassen(): random case lists (1..12 cases) of the rows above.
     m = 0
@@ -116,7 +116,7 @@ def crosscheck(pfad, n=200, seed=0):
         idx = rng.choice(len(rows_a), size=int(rng.integers(1, 13)), replace=True)
         za = orig.zusammenfassen([rows_a[i] for i in idx]); zb = summarize([rows_b[i] for i in idx])
         za = {umbenannt.get(k, k): v for k, v in za.items()}
-        assert za == zb, f"summary {j}: Original {za} != Uebersetzung {zb}"
+        assert za == zb, f"summary {j}: original {za} != translation {zb}"
         m += 1
     print(f"crosscheck passed: {n} random volumes (hits) + {m} random case lists (summarize), "
           f"identical results to {os.path.basename(pfad)}")

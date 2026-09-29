@@ -1,4 +1,4 @@
-"""Arm 5 (ARBEIT.md 5ae, 2026-09-29): are false alarms vessels running through many slices?  Dark run length along z.
+"""Arm 5 (WORKLOG.md 5ae, 2026-09-29): are false alarms vessels running through many slices?  Dark run length along z.
 
 For every candidate (component of the out-of-fold probability map at 0.15 / >= 1 mm3 -- the second stage's candidates):
   * z_extent_mm      : through-plane extent of the thresholded component itself;
