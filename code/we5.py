@@ -354,16 +354,16 @@ def validierung_einmal(fk_pf, probe=False, schwelle=None):
     z["cases"] = len(val_ids)
     z["n_pred"] = int(sum(r["n_pred"] for r in rows))
     z["filterkette_sha256"] = hashlib.sha256(open(fk_pf, "rb").read()).hexdigest()
-    z["modell"] = ("we4-Sieger r3: 5 Falten-Modelle, je out-of-fold-Voxel-Mindestgroesse, "
-                   "Mehrheitsvotum >=3/5"
-                   + (f", Schwelle {schwelle}" if schwelle is not None
-                      else ", je out-of-fold-Schwelle"))
+    z["modell"] = ("we4 winner r3: 5 fold models, per-fold out-of-fold minimum voxel size, "
+                   "majority vote >=3/5"
+                   + (f", threshold {schwelle}" if schwelle is not None
+                      else ", per-fold out-of-fold threshold"))
     z["filterkette"] = kette
     z["cv_daneben"] = dict(roh=fk["cv_roh"], groesse=fk["cv_groesse"],
                            v1=fk["cv_v1"], v2=fk["cv_v2"])
-    z["unsicherheit"] = ("47 Referenz-Blutungen tragen etwa +-0.1 F1 Unsicherheit; "
-                         "starke Abweichung zur CV ist ein Befund, keine Aufforderung "
-                         "zur Nachjustierung (das Set wurde genau einmal beruehrt).")
+    z["unsicherheit"] = ("47 reference microbleeds carry about +-0.1 F1 uncertainty; "
+                         "a strong deviation from the CV is a finding, not a call "
+                         "for re-tuning (the set was touched exactly once).")
     z["dauer_s"] = round(time.time() - t0, 1)
     z["probe"] = probe
     tmp = f"{outd}/summary.json.tmp"

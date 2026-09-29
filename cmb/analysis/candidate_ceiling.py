@@ -98,11 +98,11 @@ def main() -> None:
         for t in args.thresholds:
             per_threshold[t][name] = hits[t]
             counts[t][name] = candidates[t]
-        print(f"{name}: " + "  ".join(f"t={t:g}: {candidates[t]} Kand., {len(hits[t])} erreicht" for t in args.thresholds), flush=True)
+        print(f"{name}: " + "  ".join(f"t={t:g}: {candidates[t]} cand., {len(hits[t])} reached" for t in args.thresholds), flush=True)
 
     total = len({l for l in lesions if l.split("#")[0] in cases_seen})
-    print(f"\n{len(cases_seen)} Faelle, {total} Referenz-Blutungen\n")
-    print(f"{'Erste Stufe':22s} {'Schwelle':>9s} {'Kandidaten':>11s} {'erreicht':>9s} {'Decke S':>8s} {'F1-Decke':>9s}")
+    print(f"\n{len(cases_seen)} cases, {total} reference microbleeds\n")
+    print(f"{'first stage':22s} {'threshold':>9s} {'candidates':>11s} {'reached':>9s} {'ceil. S':>8s} {'F1 ceil.':>9s}")
     for name in runs:
         for t in args.thresholds:
             k = len(per_threshold[t][name])

@@ -290,8 +290,8 @@ def sammeln(ids, fold_of):
         "ziel_spacing_mm": SPACING.tolist(), "rand_voxel": RAND,
         "quelle": "dev/preproc/<id>/<id>_{image,label}.nii.gz",
         "frst": {"modul": "code/frst.py", "radien_voxel": list(frstmod.RADIEN), "alpha": frstmod.ALPHA,
-                 "k_n": "9.9 (n=1) sonst 8", "sigma": "0.25 n", "modus": "hell (Bild invertiert)",
-                 "normierung": "je Fall 99.9-Perzentil im Hirn, auf [0,1] gekappt"},
+                 "k_n": "9.9 (n=1) else 8", "sigma": "0.25 n", "modus": "bright (image inverted)",
+                 "normierung": "per case 99.9th percentile inside the brain, clipped to [0,1]"},
         "faelle_fertig": len(ok), "faelle_erwartet": len(ids),
         "komponenten_abweichend": [f["id"] for f in ok if not f["komponenten_gleich"]],
         "komponenten_gerettet": {f["id"]: f["label_nearest"]["verloren_gerettet"] for f in ok

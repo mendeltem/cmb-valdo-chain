@@ -60,7 +60,7 @@ def main():
             pred = post_process(np.asarray(nib.load(found[0]).dataobj).astype(np.float32) / 255.0, seg if csf else None)
             row[name + "_n"] = int(ndimage.label(pred, structure=N26)[1]); row[name + "_ml"] = round(float(pred.sum()) * vox_ml, 4)
             tot[name] += row[name + "_ml"]
-        rows.append(row); print(f"{cid}: Referenz {row['referenz_n']} / {row['referenz_ml']:.4f} ml | " + " | ".join(f"{n} {row[n + '_n']} / {row[n + '_ml']} ml" for n, _, _ in runs), flush=True)
+        rows.append(row); print(f"{cid}: reference {row['referenz_n']} / {row['referenz_ml']:.4f} ml | " + " | ".join(f"{n} {row[n + '_n']} / {row[n + '_ml']} ml" for n, _, _ in runs), flush=True)
     out = absolute(a.csv); os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
