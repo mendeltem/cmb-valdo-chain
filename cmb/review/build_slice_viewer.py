@@ -151,13 +151,13 @@ body{margin:0;background:#111;color:#ddd;font:14px system-ui,sans-serif;display:
 details{display:inline-block;vertical-align:top}details summary{cursor:pointer;color:#9cf;user-select:none}#info{max-width:min(70vw,900px)}#infotext{padding:4px 0;font-size:13px;color:#ccc}#infotext div{margin:2px 0}#infotext b{color:#fff}#bar button{margin-right:6px}#toggles{display:flex;flex-wrap:wrap;gap:2px 4px;max-width:70vw}#bar .sw{display:inline-block;width:12px;height:12px;margin-right:4px;vertical-align:middle;border-radius:2px}
 #panels{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;min-height:0}
 .panel{position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.panel .stack{position:relative;overflow:hidden}
+.panel .stack{position:relative;overflow:hidden;transform-origin:center center;will-change:transform;cursor:grab}
 .panel img{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:auto}
 .panel .cap{position:absolute;left:8px;top:6px;color:#fff;text-shadow:0 0 4px #000;font-size:13px;z-index:9}
 #foot{padding:6px 10px;border-top:1px solid #333;display:flex;gap:16px;align-items:center}
 #foot input[type=range]{flex:1}
 #sel{display:none}
-#nav{display:none}
+#nav{display:flex;gap:4px;margin-left:6px}#nav button{padding:2px 8px}
 @media (max-width:900px), (orientation:portrait){
  body{display:block;height:auto;overflow:auto}
  #list{display:none}
@@ -180,13 +180,13 @@ details{display:inline-block;vertical-align:top}details summary{cursor:pointer;c
 <div id="bar"><b id="title"></b><span id="cnt"></span><span style="flex:1"></span>
 <details id="tgd" open><summary>Models</summary><span id="toggles"></span></details>
 <details id="info"><summary>What do the models mean?</summary><div id="infotext"></div></details>
-<span class="hint">mouse wheel / arrows: slice · PgUp/PgDn: case · R: reference on/off</span></div>
+<span class="hint">wheel / pinch: zoom · drag: pan · ▲▼ or arrows: slice · PgUp/PgDn: case · R: reference on/off</span></div>
 <div id="panels">
  <div class="panel"><div class="stack" id="left"><div class="cap">Reference</div></div></div>
  <div class="panel"><div class="stack" id="right"><div class="cap">Models</div></div></div>
 </div>
 <div id="foot"><span id="zlab"></span><input type="range" id="z" min="0" max="0" value="0"><span id="flags"></span>
-<div id="nav"><button id="prevc" title="previous case">◀</button><button id="zm" title="slice up">▲</button><button id="zp" title="slice down">▼</button><button id="nextc" title="next case">▶</button></div></div>
+<div id="nav"><button id="prevc" title="previous case">◀</button><button id="zm" title="slice up">▲</button><button id="zp" title="slice down">▼</button><button id="nextc" title="next case">▶</button><button id="zoomout" title="zoom out">−</button><button id="zoomin" title="zoom in">+</button><button id="zoomreset" title="reset zoom">1:1</button></div></div>
 </div>
 <script>
 const DATA=__DATA__; const RUNS=__RUNS__; let cur=0, zi=0, showRef=true; const on={}; RUNS.forEach(r=>on[r.name]=!!r.on);
@@ -211,7 +211,14 @@ let show=function(i){cur=i;const c=DATA[cur];L.innerHTML='<div class="cap">Refer
  let cnt=`reference ${c.n_ref}${c.ref_ml!==undefined?` (${c.ref_ml.toFixed(3)} ml)`:''}`;RUNS.forEach(r=>{const s=c.stats[r.name];if(s)cnt+=` · ${r.name}: TP ${s.tp} FP ${s.fp} FN ${s.fn}${s.ml!==undefined?` (${s.ml.toFixed(3)} ml)`:''}`;});document.getElementById('cnt').textContent=cnt;
  buildList(document.getElementById('q').value);setTimeout(fit,30);};
 function step(d){const n=DATA[cur].tiles.length;zi=Math.max(0,Math.min(n-1,zi+d));place();}
-document.getElementById('panels').addEventListener('wheel',e=>{e.preventDefault();step(e.deltaY>0?1:-1);},{passive:false});
+let zoom=1,px=0,py=0;function applyZoom(){[L,R].forEach(st=>{st.style.transform=`translate(${px}px,${py}px) scale(${zoom})`;st.style.cursor=zoom>1?'grab':'default';});document.getElementById('zoomreset').textContent=zoom.toFixed(1)+'x';}
+function clampPan(){const w=L.clientWidth,h=L.clientHeight;const mx=Math.max(0,(w*zoom-w)/2),my=Math.max(0,(h*zoom-h)/2);px=Math.max(-mx,Math.min(mx,px));py=Math.max(-my,Math.min(my,py));}
+function zoomAt(f,cx,cy){const nz=Math.max(1,Math.min(12,zoom*f));if(cx!==undefined){const r=L.getBoundingClientRect();const ox=cx-(r.left+r.width/2),oy=cy-(r.top+r.height/2);px=ox-(ox-px)*(nz/zoom);py=oy-(oy-py)*(nz/zoom);}zoom=nz;if(zoom===1){px=0;py=0;}clampPan();applyZoom();}
+function resetZoom(){zoom=1;px=0;py=0;applyZoom();}
+document.getElementById('panels').addEventListener('wheel',e=>{e.preventDefault();const r=(e.currentTarget.querySelector('.stack')||L).getBoundingClientRect();zoomAt(e.deltaY<0?1.2:1/1.2,e.clientX,e.clientY);},{passive:false});
+document.getElementById('zoomin').onclick=()=>zoomAt(1.5);document.getElementById('zoomout').onclick=()=>zoomAt(1/1.5);document.getElementById('zoomreset').onclick=resetZoom;
+let drag=null;document.getElementById('panels').addEventListener('mousedown',e=>{if(zoom<=1||e.button!==0)return;drag={x:e.clientX-px,y:e.clientY-py};e.preventDefault();});
+window.addEventListener('mousemove',e=>{if(!drag)return;px=e.clientX-drag.x;py=e.clientY-drag.y;clampPan();applyZoom();});window.addEventListener('mouseup',()=>{drag=null;});
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowDown'||e.key==='ArrowRight')step(1);else if(e.key==='ArrowUp'||e.key==='ArrowLeft')step(-1);
  else if(e.key==='PageDown')show(Math.min(DATA.length-1,cur+1));else if(e.key==='PageUp')show(Math.max(0,cur-1));else if(e.key==='r'||e.key==='R'){showRef=!showRef;L.querySelector('.ref').style.display=showRef?'':'none';}});
 document.getElementById('z').addEventListener('input',e=>{zi=+e.target.value;place();});
@@ -219,17 +226,18 @@ document.getElementById('q').addEventListener('input',e=>buildList(e.target.valu
 const it=document.getElementById('infotext');it.innerHTML=RUNS.map(r=>`<div><span class="sw" style="background:rgb(${r.colour})"></span><b>${esc(r.name)}</b>: ${esc(r.info||'')}</div>`).join('');
 const mobile0=window.innerWidth<=900||window.innerHeight>window.innerWidth;if(mobile0)document.getElementById('tgd').removeAttribute('open');
 document.getElementById('tgd').addEventListener('toggle',()=>setTimeout(fit,30));document.getElementById('info').addEventListener('toggle',()=>setTimeout(fit,30));
-const tg=document.getElementById('toggles');const ba=document.createElement('button');ba.textContent='alle an';ba.onclick=()=>setAll(true);const bo=document.createElement('button');bo.textContent='alle aus';bo.onclick=()=>setAll(false);tg.appendChild(ba);tg.appendChild(bo);
+const tg=document.getElementById('toggles');const ba=document.createElement('button');ba.textContent='all on';ba.onclick=()=>setAll(true);const bo=document.createElement('button');bo.textContent='all off';bo.onclick=()=>setAll(false);tg.appendChild(ba);tg.appendChild(bo);
 RUNS.forEach(r=>{const lab=document.createElement('label');lab.title=r.info||'';lab.innerHTML=`<input type="checkbox" ${r.on?'checked':''}> <span class="sw" style="background:rgb(${r.colour})"></span>${esc(r.name)} `;
  lab.querySelector('input').onchange=ev=>{on[r.name]=ev.target.checked;R.querySelectorAll('img.ov').forEach(im=>{if(im.dataset.run===r.name)im.style.display=on[r.name]?'':'none';});place();};tg.appendChild(lab);});
 const sel=document.getElementById('sel');DATA.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${c.id} · Ref ${c.n_ref}`;sel.appendChild(o);});sel.onchange=e=>show(+e.target.value);
 document.getElementById('prevc').onclick=()=>show(Math.max(0,cur-1));document.getElementById('nextc').onclick=()=>show(Math.min(DATA.length-1,cur+1));
 document.getElementById('zm').onclick=()=>step(-1);document.getElementById('zp').onclick=()=>step(1);
-let ty=null,tacc=0;const pn=document.getElementById('panels');
-pn.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;tacc=0;},{passive:true});
-pn.addEventListener('touchmove',e=>{if(ty===null)return;const dy=e.touches[0].clientY-ty;ty=e.touches[0].clientY;tacc+=dy;while(tacc>=18){step(-1);tacc-=18;}while(tacc<=-18){step(1);tacc+=18;}e.preventDefault();},{passive:false});
-pn.addEventListener('touchend',()=>{ty=null;});
-const _show=show;show=function(i,keep){_show(i,keep);sel.value=cur;};
+const pn=document.getElementById('panels');let t1=null,pinch=null;
+function dist(e){const a=e.touches[0],b=e.touches[1];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
+pn.addEventListener('touchstart',e=>{if(e.touches.length===2){pinch={d:dist(e),z:zoom,cx:(e.touches[0].clientX+e.touches[1].clientX)/2,cy:(e.touches[0].clientY+e.touches[1].clientY)/2};t1=null;}else if(e.touches.length===1){t1={x:e.touches[0].clientX-px,y:e.touches[0].clientY-py};}},{passive:true});
+pn.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const f=dist(e)/pinch.d;const target=Math.max(1,Math.min(12,pinch.z*f));zoomAt(target/zoom,pinch.cx,pinch.cy);e.preventDefault();}else if(t1&&e.touches.length===1&&zoom>1){px=e.touches[0].clientX-t1.x;py=e.touches[0].clientY-t1.y;clampPan();applyZoom();e.preventDefault();}},{passive:false});
+pn.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;if(e.touches.length===0)t1=null;});
+const _show=show;show=function(i,keep){_show(i,keep);sel.value=cur;resetZoom();};
 window.addEventListener('resize',fit);const h0=decodeURIComponent(location.hash.slice(1));const i0=DATA.findIndex(c=>c.id===h0);show(i0>=0?i0:0);
 </script></body></html>"""
 
