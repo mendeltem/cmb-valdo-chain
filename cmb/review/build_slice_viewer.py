@@ -169,7 +169,7 @@ details{display:inline-block;vertical-align:top}details summary{cursor:pointer;c
  #cnt{display:none}#flags{display:none}
  #foot{position:sticky;bottom:0;background:#111;flex-wrap:nowrap;font-size:13px;padding:3px 6px;gap:6px;align-items:center}
  #zlab{white-space:nowrap;font-size:12px}#foot input[type=range]{flex:1;min-width:60px}
- #nav{display:flex;gap:4px;width:auto}#nav button{font-size:16px;padding:4px 9px;line-height:1.2}
+ #nav{display:flex;gap:3px;width:auto;flex:0 0 auto}#nav button{font-size:15px;padding:4px 7px;line-height:1.2}#zoomin,#zoomout{display:none}#foot input[type=range]{flex:1 1 90px;min-width:90px}#zlab{flex:0 0 auto}
  #bar{padding:3px 6px;gap:6px}#bar label{font-size:13px;padding:2px 2px}#bar button{font-size:13px;padding:4px 8px}#title{font-size:14px}details{display:block}#info{max-width:100%}
  #sel{font-size:14px;padding:5px;margin:2px 0}
 }
@@ -236,7 +236,7 @@ const pn=document.getElementById('panels');let t1=null,pinch=null;
 function dist(e){const a=e.touches[0],b=e.touches[1];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
 pn.addEventListener('touchstart',e=>{if(e.touches.length===2){pinch={d:dist(e),z:zoom,cx:(e.touches[0].clientX+e.touches[1].clientX)/2,cy:(e.touches[0].clientY+e.touches[1].clientY)/2};t1=null;}else if(e.touches.length===1){t1={x:e.touches[0].clientX-px,y:e.touches[0].clientY-py};}},{passive:true});
 pn.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const f=dist(e)/pinch.d;const target=Math.max(1,Math.min(12,pinch.z*f));zoomAt(target/zoom,pinch.cx,pinch.cy);e.preventDefault();}else if(t1&&e.touches.length===1&&zoom>1){px=e.touches[0].clientX-t1.x;py=e.touches[0].clientY-t1.y;clampPan();applyZoom();e.preventDefault();}},{passive:false});
-pn.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;if(e.touches.length===0)t1=null;});
+let lastTap=0;pn.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;if(e.touches.length===0){t1=null;const now=Date.now();if(now-lastTap<300&&zoom>1){resetZoom();}lastTap=now;}});
 const _show=show;show=function(i,keep){_show(i,keep);sel.value=cur;resetZoom();};
 window.addEventListener('resize',fit);const h0=decodeURIComponent(location.hash.slice(1));const i0=DATA.findIndex(c=>c.id===h0);show(i0>=0?i0:0);
 </script></body></html>"""
