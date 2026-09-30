@@ -164,7 +164,7 @@ PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CMB
   .phead{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
   .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid var(--line);border-radius:7px;cursor:pointer;user-select:none;font-size:11.5px;color:var(--muted)}
   .chip.on{color:var(--ink);border-color:currentColor} .chip i{width:9px;height:9px;border-radius:2px;display:inline-block}
-  #scroll{flex:1;overflow-y:auto;min-height:0} #sheet{display:grid;grid-template-columns:__GRID__;gap:4px;margin:0 auto;max-width:__MAXW__px}
+  #scroll{flex:1;overflow:auto;min-height:0;touch-action:pan-x pan-y} #sheet{display:grid;grid-template-columns:__GRID__;gap:4px;margin:0 auto;max-width:__MAXW__px}
   .col{position:relative} .col img{display:block;width:100%} .col img.layer{position:absolute;left:0;top:0}
   .colhead{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:__GRID__;gap:4px;max-width:__MAXW__px;margin:0 auto;background:var(--panel);border-bottom:1px solid var(--line)}
   .colhead div{padding:4px 10px;font-size:12px;font-weight:700} .colhead .r{color:var(--ref)} .colhead .p{color:var(--pred)}
@@ -181,7 +181,7 @@ PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CMB
   <div class="grp"><button id="onlyFindings">only slices with findings</button><button id="nolist">hide list</button></div>
   <div class="grp"><button id="save" class="save">save verdicts</button><button id="pick">target folder</button><span id="target" class="sub"></span></div>
   <span id="overall" class="sub" style="flex-basis:100%;font-size:12.5px;color:var(--ink)"></span>
-  <span class="hint"><b>&darr;/&uarr;</b> patient &middot; <b>r</b> reference &middot; <b>p</b> prediction &middot; <b>f</b> findings only &middot; <b>1-4</b> verdict &middot; <b>s</b> save</span>
+  <span class="hint"><b>wheel / pinch</b> zoom &middot; <b>PgDn/PgUp</b> slice &middot; <b>&darr;/&uarr;</b> patient &middot; <b>r</b> reference &middot; <b>p</b> prediction &middot; <b>f</b> findings only &middot; <b>1-4</b> verdict &middot; <b>s</b> save</span>
 </header>
 <main>
   <aside><div class="tools"><input id="q" type="search" placeholder="filter patients ...">
@@ -191,6 +191,7 @@ PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CMB
   <section class="pane">
     <div class="phead"><span id="title" style="font-weight:700"></span><span id="counts" class="sub"></span>
       <span style="flex:1"></span>
+      <span class="grp"><button id="zout" title="zoom out">&minus;</button><button id="zin" title="zoom in">+</button><button id="zreset" title="reset zoom">1.0x</button></span>
       <span class="chip on" id="cRef"><i style="background:var(--ref)"></i>reference</span>
       <span class="chip on" id="cPred"><i style="background:var(--pred)"></i>prediction</span></div>
     <div id="scroll"><div class="colhead">__HEAD0__<div class="r">reference (ground truth)</div><div class="p">prediction (network)</div></div>
@@ -263,6 +264,22 @@ $('br').oninput = layers; $('ct').oninput = layers; $('note').onchange = e => { 
 window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return; const n = visible().length, v = VERDICTS.find(x => x[0] === e.key);
   if (e.key === 'ArrowDown'){ state.i = Math.min(n - 1, state.i + 1); show(); } else if (e.key === 'ArrowUp'){ state.i = Math.max(0, state.i - 1); show(); }
   else if (e.key === 'r') $('cRef').click(); else if (e.key === 'p') $('cPred').click(); else if (e.key === 'f') $('onlyFindings').click(); else if (e.key === 's') save(); else if (v) verdict(v[1]); else return; e.preventDefault(); });
+// Zoom: the sheet is widened (both columns), the scroll container scrolls in both directions; the point under the cursor stays put.
+let zoom = 1; const sc = $('scroll'), sheet = $('sheet'), colhead = document.querySelector('.colhead');
+function baseWidth(){ return Math.min(1300, sc.clientWidth); }
+function applyZoom(nz, cx, cy){ nz = Math.max(1, Math.min(10, nz)); const oldW = sheet.offsetWidth, newW = Math.round(baseWidth() * nz), f = newW / Math.max(1, oldW);
+  sheet.style.maxWidth = 'none'; colhead.style.maxWidth = 'none'; sheet.style.width = newW + 'px'; colhead.style.width = newW + 'px';
+  if (cx === undefined){ cx = sc.clientWidth / 2; cy = sc.clientHeight / 2; }
+  sc.scrollLeft = (sc.scrollLeft + cx) * f - cx; sc.scrollTop = (sc.scrollTop + cy) * f - cy; zoom = nz; $('zreset').textContent = zoom.toFixed(1) + 'x'; }
+sc.addEventListener('wheel', e => { e.preventDefault(); const r = sc.getBoundingClientRect(); applyZoom(zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX - r.left, e.clientY - r.top); }, {passive: false});
+$('zin').onclick = () => applyZoom(zoom * 1.5); $('zout').onclick = () => applyZoom(zoom / 1.5); $('zreset').onclick = () => applyZoom(1);
+let pinch = null; const pd = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+sc.addEventListener('touchstart', e => { if (e.touches.length === 2){ const r = sc.getBoundingClientRect(); pinch = {d: pd(e), z: zoom, cx: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, cy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top}; } }, {passive: true});
+sc.addEventListener('touchmove', e => { if (pinch && e.touches.length === 2){ applyZoom(pinch.z * pd(e) / pinch.d, pinch.cx, pinch.cy); e.preventDefault(); } }, {passive: false});
+sc.addEventListener('touchend', e => { if (e.touches.length < 2) pinch = null; });
+window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return; const d = cur(); if (!d) return; const h = sheet.offsetHeight / d.tiles.length;
+  if (e.key === 'PageDown'){ sc.scrollTop += h; } else if (e.key === 'PageUp'){ sc.scrollTop -= h; } else if (e.key === 'Home'){ sc.scrollTop = 0; } else if (e.key === 'End'){ sc.scrollTop = sheet.offsetHeight; } else return; e.preventDefault(); });
+window.addEventListener('resize', () => applyZoom(zoom));
 // Deep link: "qc.html#sub-107" opens that patient and scrolls to the first slice with a finding.
 function openFromHash(){ const id = decodeURIComponent(location.hash.slice(1)); if (!id) return; const k = visible().findIndex(d => d.id === id); if (k < 0) return;
   state.i = k; show(); const d = cur(), first = d.tiles.findIndex(t => t.detected + t.missed + t.false > 0);
