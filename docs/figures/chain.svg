@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 700" width="100%" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="The detection chain from the T2* volume to the list of microbleeds">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5b6878"/></marker></defs>
+<style>.b{fill:#e8f0fb;stroke:#1866c4;stroke-width:1.5}.o{fill:#fff1e0;stroke:#d9822b;stroke-width:1.8}.m{fill:#efe9fb;stroke:#6c5ce7;stroke-width:1.5}.g{fill:#e6f6ec;stroke:#1f9d55;stroke-width:1.5}.n{fill:#f4f6f8;stroke:#9aa6b5;stroke-width:1.2}
+.l{stroke:#5b6878;stroke-width:1.4;fill:none}.t0{font-size:17px;font-weight:700;fill:#1c2430}.t1{font-size:13px;font-weight:650;fill:#1c2430}.t2{font-size:10.8px;fill:#3a4653}.t3{font-size:11px;fill:#5b6878;font-style:italic}.w{font-size:11.5px;font-weight:700;fill:#1f9d55}.wn{font-size:11.5px;font-weight:700;fill:#b04a1a}</style>
+<rect x="0" y="0" width="1180" height="700" fill="#fff"/>
+<text x="24" y="30" class="t0">cmb-valdo-chain: from the T2* volume to the list of microbleeds</text>
+<text x="24" y="50" class="t3">green = paired change of the lesion-level F1 on the 57 VALDO cross-validation cases when the step was introduced &#183; orange = the frozen chain's own F1 at that point</text>
+<rect class="n" x="24" y="70" width="262" height="118" rx="9"/>
+<text x="36" y="92" class="t1">1  Input: one T2*-weighted volume</text>
+<text x="36" y="111" class="t2">VALDO Task 2: 3 cohorts, 0.45-1 mm in plane,</text>
+<text x="36" y="126" class="t2">0.8-4 mm slices; or an in-house T2* / SWI scan</text>
+<text x="36" y="141" class="t2">brain mask as delivered; no T1, no T2, no registration</text>
+<rect class="b" x="310" y="70" width="262" height="118" rx="9"/>
+<text x="322" y="92" class="t1">2  Preprocessing</text>
+<text x="322" y="111" class="t2">FSL FAST -B bias correction, once per case</text>
+<text x="322" y="126" class="t2">inverted: 1 - image / max inside the brain</text>
+<text x="322" y="141" class="t2">NO vessel inpainting (it hid 109 of 236 CMB)</text>
+<text x="322" y="178" class="w">no inpainting: +0.136</text>
+<rect class="b" x="596" y="70" width="262" height="118" rx="9"/>
+<text x="608" y="92" class="t1">3  Common grid + FRST channel</text>
+<text x="608" y="111" class="t2">resample to 0.5 x 0.5 x 1 mm, crop to the brain</text>
+<text x="608" y="126" class="t2">fast radial symmetry transform, radii 1-3 mm</text>
+<text x="608" y="141" class="t2">network input = 2 channels: T2*, FRST</text>
+<text x="608" y="178" class="w">grid +0.06 &#183; FRST kept (without: -0.05)</text>
+<rect class="o" x="882" y="70" width="262" height="118" rx="9"/>
+<text x="894" y="92" class="t1">4  Anisotropic 3D U-Net (a03-aniso)</text>
+<text x="894" y="111" class="t2">level 0 in-plane only (conv 1x3x3, pool 1x2x2),</text>
+<text x="894" y="126" class="t2">3 isotropic levels + bottleneck, 22.5 M parameters</text>
+<text x="894" y="141" class="t2">patch 38 x 31 x 47 mm, 60 epochs, seeds 42 + 1</text>
+<text x="894" y="178" class="wn">F1 0.585 raw (seed range 0.55-0.65)</text>
+<path class="l" d="M286 129 L310 129" marker-end="url(#a)"/>
+<path class="l" d="M572 129 L596 129" marker-end="url(#a)"/>
+<path class="l" d="M858 129 L882 129" marker-end="url(#a)"/>
+<path class="l" d="M1013 188 L1013 236" marker-end="url(#a)"/>
+<text x="1023" y="216" class="t3">probability map per voxel</text>
+<rect class="b" x="882" y="236" width="262" height="118" rx="9"/>
+<text x="894" y="258" class="t1">5  Fixed operating cell</text>
+<text x="894" y="277" class="t2">threshold 0.3, 26-connected components</text>
+<text x="894" y="292" class="t2">drop components &lt; 2 mm&#179; and giant blobs</text>
+<text x="894" y="307" class="t2">cell fixed on the inner folds, never on the test fold</text>
+<text x="894" y="344" class="wn">deliverable without any rule: 0.585</text>
+<rect class="g" x="596" y="236" width="262" height="118" rx="9"/>
+<text x="608" y="258" class="t1">6  CSF rule (SynthSeg)</text>
+<text x="608" y="277" class="t2">FreeSurfer SynthSeg tissue map on the grid</text>
+<text x="608" y="292" class="t2">a component whose majority lies in CSF</text>
+<text x="608" y="307" class="t2">(sulci, ventricles; 7 labels) is removed</text>
+<text x="608" y="344" class="w">+0.06, no true positive lost &#183; F1 0.647</text>
+<rect class="m" x="310" y="236" width="262" height="118" rx="9"/>
+<text x="322" y="258" class="t1">7  Candidates for a second look</text>
+<text x="322" y="277" class="t2">low threshold 0.15 / 1 mm&#179;, CSF kept</text>
+<text x="322" y="292" class="t2">16 mm cube per candidate: T2*, FRST and</text>
+<text x="322" y="307" class="t2">the stage-1 probability (278 on VALDO)</text>
+<rect class="m" x="24" y="236" width="262" height="118" rx="9"/>
+<text x="36" y="258" class="t1">8  Pooled 3D-CNN classifier</text>
+<text x="36" y="277" class="t2">3 conv blocks (16-32-64 ch.), global pool, 1 logit</text>
+<text x="36" y="292" class="t2">trained on candidates of ALL cohorts, 3 seeds</text>
+<text x="36" y="307" class="t2">flips + offsets; threshold from inner folds</text>
+<text x="36" y="344" class="w">SWI +0.045 &#183; VALDO / T2* within seed noise</text>
+<path class="l" d="M882 295 L858 295" marker-end="url(#a)"/>
+<path class="l" d="M596 295 L572 295" marker-end="url(#a)"/>
+<path class="l" d="M310 295 L286 295" marker-end="url(#a)"/>
+<path class="l" d="M155 354 L155 402" marker-end="url(#a)"/>
+<text x="165" y="382" class="t3">kept candidates</text>
+<rect class="g" x="24" y="402" width="548" height="96" rx="9"/>
+<text x="36" y="424" class="t1">9  Output per case</text>
+<text x="36" y="443" class="t2">binary CMB mask on the grid; component list with centre, volume (ml), score</text>
+<text x="36" y="458" class="t2">burden classes 0 / 1-4 / &#8805; 5 (ARIA rule &gt; 4): 0.81 of VALDO cases correct</text>
+<text x="36" y="473" class="t2">QC pages: reference left, model outlines right, scroll = z</text>
+<rect class="n" x="596" y="402" width="548" height="96" rx="9"/>
+<text x="608" y="424" class="t1">Results of the frozen chain (lesion-level F1, touch rule, 26-connectivity)</text>
+<text x="608" y="443" class="t2">VALDO 5-fold CV 0.647 &#183; 15 held-out cases, measured once: 0.468 pooled, 0.731 without the 73-CMB case</text>
+<text x="608" y="458" class="t2">in-house T2* 0.671 &#183; in-house SWI 0.672 (own U-Net per cohort + the shared classifier)</text>
+<text x="608" y="473" class="t2">external public SWI cohort, no adaptation: 0.613 (U-Net + CSF rule), 0.630 (+ VALDO classifier)</text>
+<text x="24" y="540" class="t1">What did NOT help (measured the same way, paired, pre-registered; nothing adopted)</text>
+<text x="24" y="562" class="t2">&#8226; other losses: blob, focal-Tversky, no deep supervision</text>
+<text x="604" y="562" class="t2">&#8226; rotation / scale / contrast augmentation (-0.06)</text>
+<text x="24" y="581" class="t2">&#8226; 90 or 120 epochs; larger or smaller patches (24 mm: -0.22)</text>
+<text x="604" y="581" class="t2">&#8226; z-normalisation, landmark harmonisation (all n. s.)</text>
+<text x="24" y="600" class="t2">&#8226; synthetic lesions in training (-0.07 to -0.13)</text>
+<text x="604" y="600" class="t2">&#8226; cubic interpolation (-0.02), T1 + T2 extra channels (-0.02)</text>
+<text x="24" y="619" class="t2">&#8226; wider (48 ch.) or narrower (16 ch.) U-Net, MedNeXt, 2.5D</text>
+<text x="604" y="619" class="t2">&#8226; vessel rules: run length, Frangi, blobness, border distance</text>
+<text x="24" y="638" class="t2">&#8226; a second stage per cohort instead of one pooled classifier</text>
+<text x="604" y="638" class="t2">&#8226; fine-tuning the classifier on 10-25 % of the target cohort</text>
+<text x="24" y="686" class="t3">Blue = data preparation, orange = the network, green = rules that survived, purple = the second stage. Detail: docs/WORKLOG.md, docs/OVERVIEW-tests-2026-09-29.md, docs/REPLICATION.md, figure docs/figures/unet.svg.</text>
+</svg>

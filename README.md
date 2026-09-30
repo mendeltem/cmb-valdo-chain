@@ -53,6 +53,40 @@ Slice viewer, public: **https://mendeltem.github.io/valdo-cmb-qc/slices/** (two 
 right, scroll = z, volumes in ml; built by `pipeline/11_qc_viewer.py`). Overview page with per-patient F1 and the pipeline diagram:
 https://mendeltem.github.io/valdo-cmb-qc/ . VALDO images only (CC BY-NC-SA 4.0); in-house cohorts are never published.
 
+## Architecture of the chain
+
+![The chain from the T2* volume to the list of microbleeds](docs/figures/chain.svg)
+
+**Stage 1, the detector.** One T2*-weighted volume (no T1, no T2, no registration) is bias-corrected once, inverted so that
+microbleeds are bright, and resampled to a common 0.5 x 0.5 x 1 mm grid. The fast radial symmetry transform (radii 1-3 mm) is
+computed on that grid and fed as a second channel: it points the network at small round dark spots. The network is an
+anisotropic 3D U-Net (`a03-aniso` in `code/netze.py`): its first level convolves and pools only within the slice (kernels 1x3x3,
+pooling 1x2x2), because the through-plane direction of the input is mostly interpolated (0.8-4 mm slices); the three deeper
+levels and the bottleneck are ordinary isotropic blocks. Every block is (convolution, InstanceNorm, LeakyReLU) twice; channels
+32-64-128-256-512, 22.5 M parameters, deep supervision on the decoder, BCE + Dice loss, AdamW, 60 epochs on patches of
+38 x 31 x 47 mm sampled 60 % on lesions / 25 % in the brain / 15 % anywhere, flips as the only augmentation. Two seeds (42 and 1)
+are averaged. The output is a probability per voxel.
+
+![The anisotropic 3D U-Net](docs/figures/unet.svg)
+
+**Fixed operating cell.** Threshold 0.3, 26-connected components, components below 2 mm3 and giant blobs (> 2100 voxels) removed.
+The cell was chosen on the inner folds and never on the fold being scored.
+
+**CSF rule.** A FreeSurfer SynthSeg tissue map is resampled to the grid; a component whose majority lies in sulcal or
+ventricular CSF is dropped. On VALDO this removes 98 of 176 false positives without losing a true positive (+0.06).
+
+**Stage 2, the candidate classifier.** With a low threshold (0.15, 1 mm3, CSF kept) every suspicious component becomes a
+candidate; a 16 mm cube of T2*, FRST and stage-1 probability around it is fed to a small 3D CNN (three blocks 16-32-64 channels,
+global average pooling, one logit; three seeds averaged; flips and random offsets). The classifier is trained on the candidates
+of all cohorts together, which is what made it work: per-cohort classifiers gained nothing, the pooled one adds +0.045 on SWI
+and stays within seed noise on VALDO and T2*. A classifier trained on VALDO candidates alone transfers to in-house SWI without
+any private training data (zero-shot 0.671 = pooled 0.672).
+
+**What each step was worth** is written on the figure (paired lesion-level F1 on the 57 VALDO cross-validation cases,
+10 000 case bootstraps). The largest single lever was removing the original's vessel inpainting (+0.136): it painted over
+109 of the 236 reference microbleeds. Everything that did not help was measured the same way and is listed at the bottom
+of the figure and in `docs/OVERVIEW-tests-2026-09-29.md`.
+
 ## Pipeline scripts (numbered = order)
 ```
 python pipeline/00_selftest.py              # no data, CPU, < 1 min: imports, FRST, lesion metric, U-Net forward pass, dry run of all steps

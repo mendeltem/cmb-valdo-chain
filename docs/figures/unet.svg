@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="100%" role="img" aria-label="Anisotropic 3D U-Net: encoder on the left, decoder on the right, skip connections in between">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5b6878"/></marker></defs>
+  <style>.b{fill:#e8f0fb;stroke:#1866c4;stroke-width:1.5}.o{fill:#fff1e0;stroke:#d9822b;stroke-width:1.8}.m{fill:#efe9fb;stroke:#6c5ce7;stroke-width:1.5}.l{stroke:#5b6878;stroke-width:1.4;fill:none}
+  .s{stroke:#9aa6b5;stroke-width:1.4;stroke-dasharray:6 5;fill:none}.t1{font-size:14px;font-weight:650;fill:#1c2430}.t2{font-size:12px;fill:#5b6878}.t3{font-size:11.5px;fill:#5b6878;font-style:italic}</style>
+  <text x="40" y="24" class="t2">input: 2 channels (T2*, FRST), 38 x 62 x 94 voxels, padded to 40 x 64 x 96</text>
+  <path class="l" d="M150 30 V58" marker-end="url(#a)"/>
+  <rect class="o" x="40" y="60" width="220" height="56" rx="8"/><text x="52" y="83" class="t1">level 0 &#183; 32 channels</text><text x="52" y="102" class="t2">40 x 64 x 96 &#183; conv 1x3x3</text>
+  <rect class="b" x="80" y="150" width="220" height="56" rx="8"/><text x="92" y="173" class="t1">level 1 &#183; 64 channels</text><text x="92" y="192" class="t2">40 x 32 x 48 &#183; conv 3x3x3</text>
+  <rect class="b" x="120" y="240" width="220" height="56" rx="8"/><text x="132" y="263" class="t1">level 2 &#183; 128 channels</text><text x="132" y="282" class="t2">20 x 16 x 24</text>
+  <rect class="b" x="160" y="330" width="220" height="56" rx="8"/><text x="172" y="353" class="t1">level 3 &#183; 256 channels</text><text x="172" y="372" class="t2">10 x 8 x 12</text>
+  <rect class="m" x="340" y="440" width="220" height="56" rx="8"/><text x="352" y="463" class="t1">bottleneck &#183; 512 channels</text><text x="352" y="482" class="t2">5 x 4 x 6 &#183; 10.6 M parameters</text>
+  <rect class="b" x="520" y="330" width="220" height="56" rx="8"/><text x="532" y="353" class="t1">decoder 3 &#183; 256 channels</text><text x="532" y="372" class="t2">10 x 8 x 12</text>
+  <rect class="b" x="560" y="240" width="220" height="56" rx="8"/><text x="572" y="263" class="t1">decoder 2 &#183; 128 channels</text><text x="572" y="282" class="t2">20 x 16 x 24</text>
+  <rect class="b" x="600" y="150" width="220" height="56" rx="8"/><text x="612" y="173" class="t1">decoder 1 &#183; 64 channels</text><text x="612" y="192" class="t2">40 x 32 x 48</text>
+  <rect class="o" x="640" y="60" width="220" height="56" rx="8"/><text x="652" y="83" class="t1">decoder 0 &#183; 32 channels</text><text x="652" y="102" class="t2">40 x 64 x 96 &#183; conv 1x3x3</text>
+  <path class="l" d="M150 116 L190 150" marker-end="url(#a)"/><text x="22" y="138" class="t3">max-pool 1x2x2</text>
+  <path class="l" d="M190 206 L230 240" marker-end="url(#a)"/><text x="62" y="228" class="t3">max-pool 2x2x2</text>
+  <path class="l" d="M230 296 L270 330" marker-end="url(#a)"/><text x="102" y="318" class="t3">max-pool 2x2x2</text>
+  <path class="l" d="M270 386 L400 440" marker-end="url(#a)"/><text x="196" y="424" class="t3">max-pool 2x2x2</text>
+  <path class="l" d="M500 440 L630 386" marker-end="url(#a)"/><text x="590" y="424" class="t3">transposed conv 2x2x2</text>
+  <path class="l" d="M630 330 L670 296" marker-end="url(#a)"/><text x="690" y="318" class="t3">up 2x2x2</text>
+  <path class="l" d="M670 240 L710 206" marker-end="url(#a)"/><text x="730" y="228" class="t3">up 2x2x2</text>
+  <path class="l" d="M710 150 L750 116" marker-end="url(#a)"/><text x="770" y="138" class="t3">up 1x2x2</text>
+  <path class="s" d="M260 88 H640" marker-end="url(#a)"/><path class="s" d="M300 178 H600" marker-end="url(#a)"/><path class="s" d="M340 268 H560" marker-end="url(#a)"/><path class="s" d="M380 358 H520" marker-end="url(#a)"/>
+  <text x="392" y="80" class="t3">skip connection (concatenate)</text>
+  <path class="l" d="M750 60 V34" marker-end="url(#a)"/><text x="560" y="24" class="t2">1x1x1 conv &#8594; 1 channel &#8594; sigmoid &#8594; crop to 38 x 62 x 94</text>
+  <text x="40" y="528" class="t2">every block: (convolution &#8594; InstanceNorm &#8594; LeakyReLU) x 2 &#183; orange = convolution and pooling in-plane only (the through-plane direction is mostly interpolated)</text>
+</svg>
