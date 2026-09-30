@@ -175,7 +175,7 @@ PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CMB
 </style></head><body>
 <header>
   <h1>CMB QC <span class="a">__DATASET__</span></h1>
-  <span class="sub">__N__ patients &middot; model __MODEL__ &middot; __LAYOUT__ &middot; slices at acquired spacing, scroll = z axis &middot; __GEN__</span>
+  <span class="sub">__N__ patients &middot; model __MODEL__ &middot; __LAYOUT__ &middot; slices at acquired spacing, wheel = zoom, scrollbar or PgDn/PgUp = z axis &middot; __GEN__</span>
   <div class="grp"><span class="lbl">brightness</span><input id="br" type="range" min="0.5" max="2.5" step="0.05" value="1">
     <span class="lbl">contrast</span><input id="ct" type="range" min="0.5" max="3" step="0.05" value="1"></div>
   <div class="grp"><button id="onlyFindings">only slices with findings</button><button id="nolist">hide list</button></div>
