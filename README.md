@@ -7,6 +7,12 @@ adaptation 0.61-0.65. All numbers, decision rules and negative findings: `docs/W
 `docs/OVERVIEW-tests-2026-09-29.md` (every test), `docs/THESIS-CORE.md` (the core for the thesis), `docs/REPLICATION.md`
 (the literal command behind every number).
 
+**Traceability.** `docs/TRACEABILITY.md` is the map: every number in the results table traced to its data, the command
+that produced it, the result file and the lab-book section; every building block of the chain traced to its source
+(paper, original code or own measurement) and to the file that implements it; every data set to its origin and licence.
+The bibliography `docs/LITERATURE.md` flags each entry as checked at the source (Q), taken from a research note (R) or
+cited from memory (G).
+
 ## What is in here
 | Folder | Content |
 |---|---|
@@ -14,7 +20,7 @@ adaptation 0.61-0.65. All numbers, decision rules and negative findings: `docs/W
 | `code/` | training and grid building (grown during the study; identifiers and flags keep their original German names, see the glossary below): `turnier.py` (all training switches), `cv5.py` (5-fold CV core), `netze.py` (architectures, winner `a03-aniso`), `frst.py`, `gitter_c_bauen.py` (0.5×0.5×1 mm grid), `preprocess.py` / `preproc_roh_bauen.py` (VALDO preprocessing), `split.py`, `we5.py --synthseg` (SynthSeg maps), `metric.py` |
 | `catalina/` | scripts for an in-house BIDS cohort: `hirn_und_bias.py` (HD-BET + FSL FAST -B once, written to `derivatives/`), `synthseg_swi.sh`, `mb_metrik.py`. No data, no identifiers. |
 | `dev/` | VALDO case list with the fixed 5-fold split (`cases.json`, `split.json`, seed 0), manifests, intensity landmarks |
-| `docs/` | working documents, literature, deviation table vs. MicrobleedNet, frozen environment (`environment/`), VALDO licence |
+| `docs/` | `TRACEABILITY.md` (the map), `WORKLOG.md` (lab book), `REPLICATION.md` (commands), `OVERVIEW-tests-2026-09-29.md`, `THESIS-CORE.md`, `LITERATURE.md`, `DEVIATIONS-microbleednet.md`, `research/` (notes), frozen environment (`environment/`), VALDO licence |
 | `env/` | `environment-from-history.yml` (conda), `requirements-lock.txt` (pip versions of the working environment) |
 | `scripts/` | `link_paths.sh` (directory tree) |
 
@@ -52,6 +58,12 @@ are never repeated. A case list `faelle.json` (id, fold, image, mask, brain, lab
 Slice viewer, public: **https://mendeltem.github.io/valdo-cmb-qc/slices/** (two axial images per patient, reference left, model outlines
 right, scroll = z, volumes in ml; built by `pipeline/11_qc_viewer.py`). Overview page with per-patient F1 and the pipeline diagram:
 https://mendeltem.github.io/valdo-cmb-qc/ . VALDO images only (CC BY-NC-SA 4.0); in-house cohorts are never published.
+
+The viewer (`cmb/review/build_slice_viewer.py`) shows two large axial images per case (reference left, model outlines right),
+the lesion F1 per case in the list and the header, the mean and pooled F1 per model at the top of the list; arrow keys
+left/right change the case, up/down the slice. For editing the page while looking at it, `python -m cmb.review.live_server OUT_DIR`
+serves one or several viewer folders on 127.0.0.1 only, rebuilds the page whenever the generator changes and the page reloads
+itself (`--refresh-html` keeps data and images).
 
 ## Architecture of the chain
 
