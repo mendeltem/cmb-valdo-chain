@@ -1329,3 +1329,35 @@ Addendum 29 Sep, evening: (1) `pipeline/00_selftest.py` ... `11_qc_viewer.py` in
 Addendum (c), 29 Sep 23:55: the arena SWI run (`mb-arena/ergebnisse/swi/microbleednet-finetune-alle`) reached a CDisc validation accuracy of 0.44 -> 0.63-0.73 (folds 0/1/4, 26-60 epochs) -- weak, but above chance; on VALDO and T2* the CDisc fine-tuning early-stopped after 13-18 epochs at chance level. So the original's second stage is the weak link on all three cohorts, least so on SWI.
 
 **Arm 9, addendum attention (user decision 30 Sep 08:20, pre-registered):** question: do the attention gates hurt by themselves, or was the collapse of a01-attunet (0.463 vs 0.585, 22 Sep) due to its isotropic first level? Run `a11-anisoatt` = a03-aniso + four additive gates (Oktay) on the skips, otherwise identical (60 epochs, gitter_d, seed 42), queued behind the tournament (entry [268]). Evaluation as in tournament 2: fixed cell raw + CSF rule, paired against baseline s42. **Expectation:** within seed noise below the baseline (0 to -0.05), no collapse like a01; cohort 3 not conspicuous. Rule: >= +0.04 -> second seed as in the tournament; otherwise the finding stays "gates add nothing, the geometry was the cause" or, if < -0.08, "gates hurt by themselves".
+
+### 7 Oct, deliverable models and the final classifier (user request 13:50-14:05)
+
+**Why:** a product package (`microbleed_detection_3D_UNET`, command `mb_segment -m valdo_t2 | charite_t2 | charite_swi`) needs
+weights that have seen every annotated case, not four fifths of them, and a second-stage classifier that exists as a file.
+The cross-validation runs keep one fold for the score and one for the checkpoint; nothing of that is a deliverable.
+
+**New tools.** `cmb/training/full_data.py` trains the anisotropic U-Net on ALL cases of one or more manifests (same code
+paths as the CV runs: `cv5.stichprobe`, BCE + Dice with deep supervision, AdamW 3e-4, bfloat16, 60 epochs, 800 patches) and
+keeps the state after the last epoch -- without an inner fold there is no checkpoint selection; measured on the CV runs the last
+state costs -0.023 [-0.069; +0.012], within noise (5o). `predict` writes ensemble maps in the fold layout that `cmb.transfer.evaluate`
+and `cmb.analysis.operating_point` score. `dev/manifest_valdo_all72.json` = the 57 CV cases plus the 15 held-out cases.
+`scripts/final_models.sh` runs the whole chain through the GPU queue: the final classifier, six trainings (three cohorts x seeds 42 and 1,
+about 14 min each), seven predictions (VALDO model on both in-house cohorts, in-house models on VALDO, each model on its own
+training data as an in-sample sanity check), scoring at the fixed cell and with the CSF rule. CPU smoke test (3 cases, 1 epoch,
+8 patches) passed before the real runs.
+
+**Final classifier (`cmb/stage2/final_classifier.py`, 14:23-14:31).** User question: "is the second classifier already mixed over
+all cohorts?" In the experiments (5d, 5e, 5j, 5z) it was trained on the pool of all cohorts, but always out of fold and never kept.
+Now: the three out-of-fold candidate sets (VALDO 278, T2* 1082, SWI 870; 2230 candidates, 1164 positive) are pooled; the decision
+threshold is chosen by a 5-fold cross-validation BY CASE over the pool (three members per fold, `fit_predict_cnn`), then three
+members are trained on all candidates and saved with the threshold (`ergebnisse/stage2/final_classifier/classifier.pt`, 464 s).
+Shared threshold 0.30, pooled out-of-fold F1 0.675 (P 0.72, S 0.63). Per cohort at the shared threshold: VALDO 0.624 (= CSF rule
+0.631, -0.008 [-0.048; +0.043]; against the plain threshold +0.060 [+0.009; +0.129]), T2* 0.676 (= rule 0.675, +0.001 [-0.016; +0.019]),
+SWI **0.684** (+0.061 [+0.014; +0.104] against the rule, +0.052 [+0.018; +0.097] against the threshold). The classifier does not
+need a tissue map (input: image, FRST, first-stage probability in a 16 mm cube), which is what makes the product installable without
+FreeSurfer. One deliverable model reproduces the finding of 5j/5z.
+
+**Install test of this repository (same day):** fresh clone, fresh conda environment -- `env/requirements-lock.txt` was unreadable
+for pip (`%2B` in version tags, +cu124 builds); replaced by `env/requirements.txt`, log in `docs/INSTALL-TEST.md`. Public page
+rewritten as the story of the build (valdo-cmb-qc 735d77c); the MicrobleedNet row "bias field: none" was wrong, its released
+script runs BET and `fast -B --nopve`.
