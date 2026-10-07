@@ -1361,3 +1361,32 @@ FreeSurfer. One deliverable model reproduces the finding of 5j/5z.
 for pip (`%2B` in version tags, +cu124 builds); replaced by `env/requirements.txt`, log in `docs/INSTALL-TEST.md`. Public page
 rewritten as the story of the build (valdo-cmb-qc 735d77c); the MicrobleedNet row "bias field: none" was wrong, its released
 script runs BET and `fast -B --nopve`.
+
+### 7 Oct, evening: cross tests of the deliverable models, the calibration shift, verdict viewers
+
+**Cross tests (`scripts/final_models.sh`, scoring completed by `scripts/final_cross_scores.sh`; the SynthSeg pattern for the in-house cohorts needs `{sid}`).**
+Released two-seed full-data ensembles, pooled lesion F1. Stage 1 at the fixed cell 0.3 / 2 mm3: VALDO model on the in-house T2* cohort **0.415**
+(P 0.28, S 0.77, 21.5 false alarms per case) against **0.622** for the five-fold VALDO ensemble in the same evaluation (`mb-arena/transfer/zero-shot-t2star`,
+re-scored today); on SWI 0.246; T2* model on VALDO 0.460 (CSF rule 0.488, cross-selected 0.467); SWI model on VALDO 0.159 (rule 0.341).
+In-sample: VALDO 0.584 raw / 0.653 rule / 0.683 cross-selected (cell 0.4 / 4 voxels); T2* 0.654 (out of fold the fold models had 0.663); SWI 0.682.
+
+**Finding: the full-data models are hotter.** Their F1 grid on the T2* cohort peaks at threshold 0.6-0.7 (0.637 with the CSF rule, cross-selected 0.629 = fold ensemble),
+and in-sample they are not better than the fold models out of fold, so this is a calibration shift of the last training state (no inner-fold checkpoint),
+not over-fitting; the last state has learned the training lesions harder (in-sample S 0.83, 3.4 false alarms per case against 1.5 out of fold at 0.3).
+The fixed cell of the fold models must not be carried over to another training run.
+
+**Stage 2 absorbs most of it.** Candidates from the cross-test maps (`cmb.stage2.candidates --synthseg none --keep-csf`) scored with the released
+`classifier.pt` at its threshold 0.30 (`ergebnisse/final/stage2_scores.json`): VALDO model on T2* 3889 candidates, **0.604** (P 0.50, S 0.77, 8.6 per case);
+at 0.5 it would be 0.681, but that threshold is chosen on the test data and the classifier has seen in-house candidates, so it is not claimable.
+VALDO model on SWI 0.434; T2* model on VALDO 0.506; SWI model on VALDO 0.354; in-sample VALDO 0.663, T2* 0.706, SWI 0.742 (optimistic).
+Product: `--threshold` added for stage 1 (default 0.3, measured recommendation 0.6 on another scanner), table in the product's `docs/CROSS-TESTS.md`.
+Open for the user: whether the product should ship the five-fold ensembles (inner-fold checkpoints, operating point 0.3 measured) instead of the full-data models.
+
+**Verdict viewers (user request).** `cmb.review.build_slice_viewer --verdict`: one model, the right image coloured by verdict (green detected, yellow
+false alarm, red missed) with three toggles; built for both in-house cohorts (private folders).
+
+**Product tests (public repository microbleed_detection_3D_UNET, release v0.1.0).** Fresh conda environment with only the README commands and the
+weights from the release: the first run hung ten minutes in FSL `fast`, which blocks silently without `FSLDIR` (the package now sets FSLDIR and
+FSLOUTPUTTYPE itself and gives every external call a timeout); the second run passed (1150 s on the CPU for a 512 x 512 x 192 case, of which 620 s FSL).
+GitHub Actions: pytest on Python 3.10 and 3.12 plus a fresh-machine job (install from GitHub, download from the release, phantom) all green.
+Option matrix: every CLI switch once with the release weights on the phantom (14 tests) plus a real VALDO case with mask, tissue map, FSL and CUDA (passed).
