@@ -1,3 +1,5 @@
+# Full pip freeze of the working environment on the original machine (record only, NOT installable as is:
+# it contains +cu124 builds and unrelated packages). Use env/requirements.txt instead.
 CoLT5-attention==0.11.2
 ImageIO==2.37.4
 Jinja2==3.1.6
@@ -153,10 +155,10 @@ tokenizers==0.22.2
 torch-einops-utils==0.1.21
 torch-geometric==2.8.0.post1
 torch==2.6.0+cu124
-torch_cluster==1.6.3%2Bpt26cu124
-torch_scatter==2.1.2%2Bpt26cu124
-torch_sparse==0.6.18%2Bpt26cu124
-torch_spline_conv==1.2.2%2Bpt26cu124
+torch_cluster==1.6.3+pt26cu124
+torch_scatter==2.1.2+pt26cu124
+torch_sparse==0.6.18+pt26cu124
+torch_spline_conv==1.2.2+pt26cu124
 torchaudio==2.6.0
 torchinfo==1.8.0
 torchmetrics==1.9.0

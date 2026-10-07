@@ -1,0 +1,14 @@
+# Runtime of the cmb package and the pipeline scripts (CPU or GPU), pinned to the versions of the working environment.
+# Install PyTorch FIRST from the PyTorch index (it is not on PyPI in the +cu124 build), then this file:
+#   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124    # GPU, CUDA 12.4
+#   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu      # CPU only (self-test, inference)
+#   pip install -r env/requirements.txt
+numpy==2.3.5
+scipy==1.18.1
+nibabel==5.4.2
+scikit-image==0.26.0
+scikit-learn==1.9.0
+pillow==12.3.0
+monai==1.5.2
+simpleitk==2.5.6
+tqdm==4.70.0

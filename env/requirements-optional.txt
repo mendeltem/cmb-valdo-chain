@@ -1,0 +1,5 @@
+# Only for the baselines and the comparison with the original code; not needed for the chain itself.
+nnunetv2==2.8.1          # cmb/baselines/nnunet_v2.py
+tensorflow==2.20.0       # cmb/baselines/shiva_cmb.py (SHIVA-CMB, released weights)
+# pip install -e /path/to/microbleed-detection   # github.com/v-sundaresan/microbleed-detection, commit 958f1cb:
+#                                                # cmb/baselines/microbleednet_finetune.py and the FRST comparison in code/frst.py
