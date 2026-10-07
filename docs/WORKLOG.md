@@ -1390,3 +1390,29 @@ weights from the release: the first run hung ten minutes in FSL `fast`, which bl
 FSLOUTPUTTYPE itself and gives every external call a timeout); the second run passed (1150 s on the CPU for a 512 x 512 x 192 case, of which 620 s FSL).
 GitHub Actions: pytest on Python 3.10 and 3.12 plus a fresh-machine job (install from GitHub, download from the release, phantom) all green.
 Option matrix: every CLI switch once with the release weights on the phantom (14 tests) plus a real VALDO case with mask, tissue map, FSL and CUDA (passed).
+
+### 7 Oct, late: leave-one-cohort-out over the four T2* cohorts (user question; `scripts/loco_t2.sh`, seed 42, full-data recipe)
+
+Train on three cohorts, test on the fourth (VALDO 1: 0.45 x 0.45 x 4 mm, 11 cases / 106 CMB; VALDO 2: 0.8 mm, 34 / 96; VALDO 3: 1 x 1 x 3-4 mm, 27 / 34;
+in-house T2*: 5 mm, 75 / 828). Pooled lesion F1; "fold models" = the research five-fold ensemble that had the cohort in training, scored on the same
+cross-validation cases.
+
+| left out | stage 1 raw 0.3 | + CSF rule | cross-selected | stage 2 (released classifier, 0.30) | fold models on the same cases (raw / rule) |
+|---|---|---|---|---|---|
+| VALDO 1 (4 mm) | 0.480 (P 0.82, S 0.34) | 0.470 | 0.490 | 0.431 | 8 cases / 32 CMB: left-out model 0.577 vs fold models 0.576 (equal) |
+| VALDO 2 (0.8 mm) | 0.286 (P 0.20, S 0.53, 6.2 FP/case) | 0.502 | 0.466 | 0.568 | 27 / 80: 0.295 / 0.503 vs **0.641 / 0.707** |
+| VALDO 3 (3-4 mm) | 0.421 (P 0.30, S 0.71) | 0.455 | 0.500 | 0.627 | 22 / 27: 0.409 / 0.439 vs 0.476 / 0.509 (within noise) |
+| in-house T2* (5 mm) | 0.336 (P 0.21, S 0.79, 32 FP/case) | 0.467 | 0.583 | 0.571 | own training 0.663 raw (5e); two-seed full-data VALDO model this afternoon: 0.415 / 0.543 / 0.629 / 0.604 |
+
+**Findings.** (1) The thick 4 mm cohort is replaceable by the others (the in-house 5 mm data cover that geometry): no loss without it.
+(2) The thin 0.8 mm cohort is not: without it -0.35 raw / -0.20 with the rule, half the sensitivity and four times the false alarms, although
+the model saw 113 cases instead of 46. The training geometry has to cover the target geometry; case count does not substitute.
+(3) The in-house cohort without itself: -0.33 raw against own training, -0.08 cross-selected; the VALDO-trained models over-detect on 5 mm
+slices (32 false alarms per case), stage 2 brings it to 0.571. (4) As in the afternoon, the last-state models run hot: cross-selected
+thresholds 0.6-0.8. One seed (noise ~0.08); seed 1 and the two-seed ensemble run on Friday (`scripts/freitag_queue.sh`, job A), together with a
+six-cohort leave-one-out over T2* and SWI (job B), the SWI pair Momeni / in-house (job C) and the nnU-Net v2 score (job D); the queue is started
+by a systemd user timer on 2026-10-09 06:00 without a session.
+
+Also today: the public VALDO viewer shows only the deliverable (two-seed ensemble with the CSF rule) coloured by verdict (green detected, yellow
+false alarm, red missed), and the README gained the section "Why patches, not whole images"; a whole-image measurement was considered and dropped
+(not feasible in 24 GB at full resolution; the patch-size dose series already covers the context question).
