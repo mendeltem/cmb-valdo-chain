@@ -105,6 +105,27 @@ any private training data (zero-shot 0.671 = pooled 0.672).
 109 of the 236 reference microbleeds. Everything that did not help was measured the same way and is listed at the bottom
 of the figure and in `docs/OVERVIEW-tests-2026-09-29.md`.
 
+## Why patches, not whole images
+
+Both networks see cut-outs, never the whole volume, and that is a design choice with measurements behind it, not only a memory limit.
+
+* **Memory.** A volume on the 0.5 x 0.5 x 1 mm grid has about 13 million voxels (e.g. 276 x 345 x 140). The first level of the U-Net
+  alone keeps 32 channels of that in bfloat16, 0.8 GB per intermediate result, and the backward pass holds several per level: tens of GB
+  for one volume. A training patch has 38 x 62 x 94 = 221 000 voxels, 60 times fewer; a full training needs 1.6 GiB of VRAM
+  (batch 4, bfloat16, measured 7 October 2026) and inference runs on a CPU.
+* **Examples.** 800 random patches per epoch, 60 % of them centred on a lesion at a random offset, show every microbleed in many positions
+  and neighbourhoods. Whole images would be 57 examples per epoch with 99.99 % background voxels.
+* **Context.** A microbleed is 2-10 mm; the question "vessel or microbleed" is decided within a few millimetres. The patch-size dose series
+  (`docs/WORKLOG.md` 5t): 24 mm cubes as in MicrobleedNet -0.216 [-0.277; -0.156], the recipe (38 x 31 x 47 mm) 0, 48 mm cubes
+  -0.016 [-0.074; +0.034]. Context beyond the recipe adds nothing; a 64 mm point was not measurable (the per-epoch patch buffer exceeded
+  the 32 GiB memory limit of the service), whole images would be the end point of this series and were not attempted.
+* **Nothing is lost at inference.** Sliding windows of the training size cover the whole volume with half-window stride, overlapping
+  predictions are averaged (about 370 windows per VALDO case).
+* **What patches cannot know** is where in the brain a component lies; that is why anatomy enters afterwards, as the SynthSeg CSF rule
+  and the tissue label of the second stage, not as an input channel (tissue map as input channels: -0.058, `docs/WORKLOG.md` 5m).
+* The second stage sees a 40 x 40 x 20 voxel block (20 mm cube) around each candidate, cropped to 32 x 32 x 16 (16 mm) with random offsets
+  and flips in training; two scales (16 + 28 mm) did not help on VALDO (-0.030, 5r).
+
 ## Pipeline scripts (numbered = order)
 ```
 python pipeline/00_selftest.py              # no data, CPU, < 1 min: imports, FRST, lesion metric, U-Net forward pass, dry run of all steps
