@@ -21,17 +21,23 @@ cited from memory (G).
 | `catalina/` | scripts for an in-house BIDS cohort: `hirn_und_bias.py` (HD-BET + FSL FAST -B once, written to `derivatives/`), `synthseg_swi.sh`, `mb_metrik.py`. No data, no identifiers. |
 | `dev/` | VALDO case list with the fixed 5-fold split (`cases.json`, `split.json`, seed 0), manifests, intensity landmarks |
 | `docs/` | `TRACEABILITY.md` (the map), `WORKLOG.md` (lab book), `REPLICATION.md` (commands), `OVERVIEW-tests-2026-09-29.md`, `THESIS-CORE.md`, `LITERATURE.md`, `DEVIATIONS-microbleednet.md`, `research/` (notes), frozen environment (`environment/`), VALDO licence |
-| `env/` | `environment-from-history.yml` (conda), `requirements-lock.txt` (pip versions of the working environment) |
+| `env/` | `requirements.txt` (runtime, pinned), `requirements-optional.txt` (baselines), `requirements-full-record.txt` (full freeze of the original machine, record only), `environment-from-history.yml` (conda) |
 | `scripts/` | `link_paths.sh` (directory tree) |
 
 ## Install
+Tested on 7 October 2026 with a fresh clone and a fresh conda environment (`docs/INSTALL-TEST.md` has the log):
 ```bash
-conda env create -n dl -f env/environment-from-history.yml     # python 3.12
-conda activate dl
-pip install -r env/requirements-lock.txt                         # torch 2.6.0+cu124, monai 1.5.2, nibabel 5.4.2, scipy 1.18, scikit-image 0.26, nnunetv2 2.8.1
-pip install -e /path/to/microbleed-detection                     # the original MicrobleedNet (github.com/v-sundaresan/microbleed-detection), used for FRST and as baseline
-bash scripts/link_paths.sh
+git clone https://github.com/mendeltem/cmb-valdo-chain.git && cd cmb-valdo-chain
+conda create -n cmb python=3.12 -y && conda activate cmb
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124   # GPU (CUDA 12.4); CPU only: .../whl/cpu
+pip install -r env/requirements.txt                                            # numpy, scipy, nibabel, scikit-image/-learn, monai, SimpleITK, pillow
+python pipeline/00_selftest.py                                                 # no data, CPU, < 1 min; must end with SELFTEST OK
+bash scripts/link_paths.sh                                                     # the directory tree the scripts expect (see Paths)
 ```
+Optional, only for the baselines: `pip install -r env/requirements-optional.txt` (nnU-Net v2, TensorFlow for SHIVA-CMB) and
+`pip install -e /path/to/microbleed-detection` (the original MicrobleedNet, github.com/v-sundaresan/microbleed-detection, commit 958f1cb;
+used by `cmb/baselines/microbleednet_finetune.py` and for the FRST comparison in `code/frst.py`).
+`env/requirements-full-record.txt` is the complete `pip freeze` of the original machine, kept as a record; it is not meant to be installed.
 External tools (only for the FIRST preprocessing of a cohort): FSL 6 (`fast -B`), HD-BET (env `medizin`), FreeSurfer 8.2 (`mri_synthseg`). Frozen versions: `docs/environment/`.
 
 ## Paths (read this)
