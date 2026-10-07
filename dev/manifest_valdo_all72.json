@@ -1,0 +1,521 @@
+[
+{
+"id": "sub-104",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-104",
+"cohort": "valdo-1",
+"n_cmb": 0
+},
+{
+"id": "sub-107",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-107",
+"cohort": "valdo-1",
+"n_cmb": 2
+},
+{
+"id": "sub-111",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-111",
+"cohort": "valdo-1",
+"n_cmb": 3
+},
+{
+"id": "sub-203",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-203",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-210",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-210",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-225",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-225",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-233",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-233",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-213",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-213",
+"cohort": "valdo-2",
+"n_cmb": 1
+},
+{
+"id": "sub-216",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-216",
+"cohort": "valdo-2",
+"n_cmb": 21
+},
+{
+"id": "sub-304",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-304",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-311",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-311",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-316",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-316",
+"cohort": "valdo-3",
+"n_cmb": 2
+},
+{
+"id": "sub-322",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-322",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-105",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-105",
+"cohort": "valdo-1",
+"n_cmb": 0
+},
+{
+"id": "sub-101",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-101",
+"cohort": "valdo-1",
+"n_cmb": 12
+},
+{
+"id": "sub-206",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-206",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-219",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-219",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-230",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-230",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-232",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-232",
+"cohort": "valdo-2",
+"n_cmb": 1
+},
+{
+"id": "sub-228",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-228",
+"cohort": "valdo-2",
+"n_cmb": 8
+},
+{
+"id": "sub-303",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-303",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-310",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-310",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-315",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-315",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-321",
+"fold": 1,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-321",
+"cohort": "valdo-3",
+"n_cmb": 2
+},
+{
+"id": "sub-103",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-103",
+"cohort": "valdo-1",
+"n_cmb": 6
+},
+{
+"id": "sub-204",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-204",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-211",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-211",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-226",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-226",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-223",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-223",
+"cohort": "valdo-2",
+"n_cmb": 1
+},
+{
+"id": "sub-218",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-218",
+"cohort": "valdo-2",
+"n_cmb": 26
+},
+{
+"id": "sub-305",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-305",
+"cohort": "valdo-3",
+"n_cmb": 2
+},
+{
+"id": "sub-312",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-312",
+"cohort": "valdo-3",
+"n_cmb": 2
+},
+{
+"id": "sub-318",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-318",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-323",
+"fold": 2,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-323",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-106",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-106",
+"cohort": "valdo-1",
+"n_cmb": 3
+},
+{
+"id": "sub-202",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-202",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-209",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-209",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-220",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-220",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-231",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-231",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-208",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-208",
+"cohort": "valdo-2",
+"n_cmb": 1
+},
+{
+"id": "sub-207",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-207",
+"cohort": "valdo-2",
+"n_cmb": 9
+},
+{
+"id": "sub-301",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-301",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-307",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-307",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-313",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-313",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-319",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-319",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-324",
+"fold": 3,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-324",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-108",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-108",
+"cohort": "valdo-1",
+"n_cmb": 6
+},
+{
+"id": "sub-205",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-205",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-214",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-214",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-227",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-227",
+"cohort": "valdo-2",
+"n_cmb": 0
+},
+{
+"id": "sub-229",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-229",
+"cohort": "valdo-2",
+"n_cmb": 1
+},
+{
+"id": "sub-222",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-222",
+"cohort": "valdo-2",
+"n_cmb": 11
+},
+{
+"id": "sub-302",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-302",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-308",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-308",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-314",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-314",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-320",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-320",
+"cohort": "valdo-3",
+"n_cmb": 2
+},
+{
+"id": "sub-327",
+"fold": 4,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-327",
+"cohort": "valdo-3",
+"n_cmb": 1
+},
+{
+"id": "sub-102",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-102",
+"cohort": "valdo-1",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-109",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-109",
+"cohort": "valdo-1",
+"n_cmb": 0,
+"held_out": true
+},
+{
+"id": "sub-110",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-110",
+"cohort": "valdo-1",
+"n_cmb": 73,
+"held_out": true
+},
+{
+"id": "sub-201",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-201",
+"cohort": "valdo-2",
+"n_cmb": 0,
+"held_out": true
+},
+{
+"id": "sub-212",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-212",
+"cohort": "valdo-2",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-215",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-215",
+"cohort": "valdo-2",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-217",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-217",
+"cohort": "valdo-2",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-221",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-221",
+"cohort": "valdo-2",
+"n_cmb": 11,
+"held_out": true
+},
+{
+"id": "sub-224",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-224",
+"cohort": "valdo-2",
+"n_cmb": 0,
+"held_out": true
+},
+{
+"id": "sub-234",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-234",
+"cohort": "valdo-2",
+"n_cmb": 2,
+"held_out": true
+},
+{
+"id": "sub-306",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-306",
+"cohort": "valdo-3",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-309",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-309",
+"cohort": "valdo-3",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-317",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-317",
+"cohort": "valdo-3",
+"n_cmb": 1,
+"held_out": true
+},
+{
+"id": "sub-325",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-325",
+"cohort": "valdo-3",
+"n_cmb": 3,
+"held_out": true
+},
+{
+"id": "sub-326",
+"fold": 0,
+"dir": "/home/uchralt/data/work/valdo-t2s/dev/gitter_d/sub-326",
+"cohort": "valdo-3",
+"n_cmb": 1,
+"held_out": true
+}
+]
