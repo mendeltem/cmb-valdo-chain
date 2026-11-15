@@ -51,15 +51,17 @@ def get_model(name: str = "valdo_t2") -> str:
 
 def predict(i, o: Optional[str] = None, m: Optional[str] = None, frst: Optional[str] = None,
             brain_mask: Optional[str] = None, device: str = "auto", csf_rule: bool = False,
-            no_bias_correction: bool = False):
+            no_bias_correction: bool = False, stage2: Optional[str] = None, profile: str = "own"):
     """cmb predict. ``i`` = scan, folder, or ``env()`` (CMB_SCAN -> CMB_OUTPUT_DIR). Returns one dict per scan
     (name, n = CMB count, classes, output, csv); for a single scan the dict itself."""
     from cmb.cli import build_parser
     from cmb import predict_cli
     if isinstance(i, SimpleNamespace):
         i, o = i.CMB_SCAN, o or i.CMB_OUTPUT_DIR
-    args = ["predict", "-i", i] + _opts(o=o, m=m, frst=frst, brain_mask=brain_mask, device=device, csf_rule=csf_rule,
-                                        no_bias_correction=no_bias_correction)
+    args = ["predict", "-i", i, "--profile", profile] + _opts(o=o, m=m, frst=frst, brain_mask=brain_mask, device=device,
+                                                              csf_rule=csf_rule, no_bias_correction=no_bias_correction)
+    if stage2:
+        args += ["--stage2"] + ([] if stage2 in (True, "valdo") else [stage2])
     res = predict_cli.run(build_parser().parse_args([str(x) for x in args]))
     return res[0] if len(res) == 1 else res
 

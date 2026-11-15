@@ -27,5 +27,13 @@ Found by testing the tag on own data. None of these changes touches the paper co
    `prepare_source` + `code/gitter_c_bauen.py`); `--profile valdo` reproduces the stored VALDO grid bit for bit
    (test on the public VALDO raw case sub-101 against the study's `dev/gitter_d`, run when `CMB_REFERENCE_GRID` points
    at it). Outputs of `cmb predict` are written back on the scan's own grid in both profiles.
+6. **VALDO-only stage-2 classifier (release v1.1.0).** `cmb get-model valdo_stage2` downloads a stage-2 candidate
+   classifier trained on VALDO alone (`cmb.stage2.final_classifier` on the 278 out-of-fold candidates of the 57 VALDO
+   cross-validation cases, 3 members, 40 epochs, threshold 0.55 by 5-fold CV by case, pooled out-of-fold lesion F1 0.614;
+   SHA-256 `ef179dca588ab522a27344c94f6001a7c01a4c701b27655e3808216302d6d4ef`, CC BY-NC-SA 4.0). It is NOT the paper's
+   frozen-V classifier (never saved). `cmb predict --stage2` (off by default) replaces the fixed cell with the classifier's
+   decision on the candidates (p > 0.15, >= 1 mm3, built exactly as `cmb.stage2.candidates`; test
+   `tests/test_stage2.py`); `--stage2 FILE` takes any `classifier.pt` of `cmb.stage2.final_classifier`. The weights now
+   download from release v1.1.0 (the paper tag keeps the stage-1 files).
 5. `scripts/prep_bids/hirn_und_bias.py`: HD-BET and FSL are found through `HDBET` / `PATH` and `FSLDIR` (it had
    home-relative paths of the original machine); `tests/test_privacy.py` now also rejects home-relative paths.

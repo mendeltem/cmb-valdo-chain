@@ -274,10 +274,62 @@ def synthseg_on_grid(restore_path: str, grid_img, work: str, log) -> Optional[np
     return np.asarray(seg.dataobj).astype(np.int32)
 
 
+# ----------------------------------------------------------------------------------------------- stage 2
+def load_stage2(path: str):
+    """A classifier bundle written by cmb.stage2.final_classifier (members, threshold, crop, candidate settings)."""
+    import torch
+    import torch.nn as nn
+    from cmb.stage2.final_classifier import build_net
+    b = torch.load(path, map_location="cpu", weights_only=False)
+    nets = []
+    for sd in b["members"]:
+        net = build_net(nn); net.load_state_dict(sd); net.eval(); nets.append(net)
+    return b, nets
+
+
+def stage2_candidates(prob: np.ndarray, image: np.ndarray, frst: np.ndarray, bundle: dict):
+    """The candidates exactly as cmb.stage2.candidates builds them (components of probability > 0.15 with >= 1 mm3 and
+    <= 2100 voxels, 26-connected, CSF kept; patch of image, FRST and probability around the rounded centre of mass,
+    stored as float16 in (channel, z, y, x)). Returns (component label volume, component ids, patches)."""
+    from cmb.stage2.candidates import crop, CONNECTIVITY_26, MAX_COMPONENT_VOXELS
+    from scipy import ndimage
+    z, y, x = bundle.get("stored_patch", [20, 40, 40])
+    half = (x // 2, y // 2, z // 2)
+    labels, _ = ndimage.label(prob > bundle.get("candidate_threshold", 0.15), structure=CONNECTIVITY_26)
+    ids, patches = [], []
+    for index, box in enumerate(ndimage.find_objects(labels), 1):
+        if box is None:
+            continue
+        mask = labels[box] == index
+        voxels = int(mask.sum())
+        if voxels * 0.25 < bundle.get("candidate_min_mm3", 1.0) or voxels > MAX_COMPONENT_VOXELS:
+            continue
+        centre = [int(round(c)) + s.start for c, s in zip(ndimage.center_of_mass(mask), box)]
+        patch = np.stack([crop(v, centre, half) for v in (image, frst, prob)])
+        patches.append(np.transpose(patch, (0, 3, 2, 1)).astype(np.float16))
+        ids.append(index)
+    return labels, ids, (np.stack(patches) if patches else np.zeros((0, 3, z, y, x), np.float16))
+
+
+def stage2_scores(patches: np.ndarray, bundle: dict, nets, device: str = "cpu") -> np.ndarray:
+    """Mean sigmoid of the members on the centred crop (the test-time path of cmb.stage2.classifier.fit_predict_cnn)."""
+    import torch
+    if len(patches) == 0:
+        return np.zeros(0, np.float32)
+    c = bundle["crop"]
+    z0, y0, x0 = ((s - k) // 2 for s, k in zip(patches.shape[-3:], c))
+    x = torch.from_numpy(np.ascontiguousarray(patches[..., z0:z0 + c[0], y0:y0 + c[1], x0:x0 + c[2]], dtype=np.float32))
+    out = np.zeros(len(patches), np.float32)
+    with torch.no_grad():
+        for net in nets:
+            out += torch.sigmoid(net.to(device)(x.to(device)).squeeze(1)).float().cpu().numpy() / len(nets)
+    return out
+
+
 # ----------------------------------------------------------------------------------------------- one scan
 def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str] = None, mask: Optional[str] = None,
             bias: str = "auto", csf: bool = False, keep_work: bool = False, log=print, cell: dict = None,
-            profile: str = "own") -> dict:
+            profile: str = "own", stage2=None) -> dict:
     import nibabel as nib
     import nibabel.processing  # noqa: F401
     from scipy import ndimage
@@ -314,6 +366,18 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
         size = np.bincount(comp.ravel(), minlength=nc + 1)
         ok = (size * VOXEL_MM3 >= cell["min_mm3"]) & (size <= cell["max_voxels"]); ok[0] = False
         keep = ok[comp]
+        score_map = np.zeros(prob.shape, np.float32)
+        if stage2 is not None:              # stage 2 replaces the fixed cell: accepted candidates of the 0.15 map
+            bundle, nets = stage2
+            comp2, ids, patches = stage2_candidates(prob, image, fr, bundle)
+            scores = stage2_scores(patches, bundle, nets)
+            keep = np.zeros(prob.shape, bool)
+            for i, s in zip(ids, scores):
+                score_map[comp2 == i] = s
+                if s >= bundle["threshold"]:
+                    keep |= comp2 == i
+            log(f"stage 2: {int((scores >= bundle['threshold']).sum())} of {len(ids)} candidates accepted "
+                f"(threshold {bundle['threshold']})")
         labels, n = ndimage.label(keep, structure=np.ones((3, 3, 3), bool))
         n_csf = 0
         if csf:
@@ -340,7 +404,8 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
                              y_mm=round(float(world[1]), 2), z_mm=round(float(world[2]), 2),
                              volume_mm3=round(vol, 2), diameter_mm=round(diam, 2),
                              size_class="<2 mm" if diam < 2 else ("2-5 mm" if diam <= 5 else ">5 mm"),
-                             stage1_max_prob=round(float(prob[box][m].max()), 3), stage2_score=""))
+                             stage1_max_prob=round(float(prob[box][m].max()), 3),
+                             stage2_score=round(float(score_map[box][m].max()), 3) if stage2 is not None else ""))
         # back to the original scan grid
         ref = nib.Nifti1Image(np.zeros(ni.shape[:3], np.float32), ni.affine)
         p_nat = nib.processing.resample_from_to(nib.Nifti1Image(prob, g_img.affine), ref, order=1, cval=0.0)
@@ -381,6 +446,10 @@ def add_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--no-bias-correction", action="store_true", help="the scan is already bias-corrected")
     ap.add_argument("--csf-rule", action="store_true", help="drop components in CSF (needs FreeSurfer mri_synthseg)")
     ap.add_argument("--keep-work", action="store_true", help="keep the intermediate grid files")
+    ap.add_argument("--stage2", nargs="?", const="valdo", default=None, metavar="CLASSIFIER",
+                    help="run the stage-2 candidate classifier after stage 1 (instead of the fixed cell): without a value "
+                         "the public VALDO-only classifier (cmb get-model valdo_stage2), or a classifier.pt "
+                         "(cmb.stage2.final_classifier); off by default (the paper's n = 0 chain)")
     ap.add_argument("--profile", choices=PROFILES, default="own",
                     help="how the scan becomes the model's input: own = the paper's pipeline for its own cohorts (RAS+ "
                          "reorientation, brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d")
@@ -416,6 +485,15 @@ def run(a) -> None:
               f"for other sequences fine-tune locally and use -m", flush=True)
     print(f"device: {device}; {len(scans)} scan(s) -> {out}", flush=True)
     models = load_models(model_dir, device)
+    stage2 = None
+    if a.stage2:
+        if a.stage2 == "valdo":
+            from cmb.pretrained import get_model as _gm
+            path = os.path.join(_gm("valdo_stage2"), "classifier.pt")
+        else:
+            path = a.stage2 if a.stage2.endswith(".pt") else os.path.join(a.stage2, "classifier.pt")
+        stage2 = load_stage2(path)
+        print(f"stage 2: {path} (threshold {stage2[0]['threshold']}, trained on {stage2[0].get('trained_on')})", flush=True)
     from cmb.commands import model_cell
     cell = model_cell(model_dir)
     print(f"post-processing: probability > {cell['threshold']}, components >= {cell['min_mm3']} mm3 and "
@@ -424,7 +502,8 @@ def run(a) -> None:
     total, results = 0, []
     for s in scans:
         r = run_one(s, out, model_dir, models, frst=a.frst, mask=a.brain_mask, bias=bias, csf=a.csf_rule,
-                    keep_work=a.keep_work, log=lambda m: print("  " + m, flush=True), cell=cell, profile=a.profile)
+                    keep_work=a.keep_work, log=lambda m: print("  " + m, flush=True), cell=cell, profile=a.profile,
+                    stage2=stage2)
         total += r["n"]
         r.update(output=out, csv=os.path.join(out, f"{r['name']}_cmb.csv"))
         results.append(r)
