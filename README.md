@@ -79,6 +79,12 @@ git), `CMB_VALDO`, `CMB_CASES`, `CMB_INHOUSE_LABEL`, `CMB_TWINS`, `CMB_QUEUE`. R
 cmb predict -i data/valdo2021/Task2/sub-101/sub-101_space-T2S_desc-masked_T2S.nii.gz -o runs/pred_valdo
 ```
 
+With the VALDO-only stage-2 classifier (after the paper, release v1.1.0):
+
+```bash
+cmb predict -i data/valdo2021/Task2/sub-101/sub-101_space-T2S_desc-masked_T2S.nii.gz -o runs/pred_valdo_stage2 --stage2
+```
+
 What `cmb predict` does, each step skipped when you pass its result: brain mask (`--brain-mask`; image > 0 for a
 skull-stripped scan; else HD-BET; else a rough intensity mask with a warning) -> bias correction (FSL FAST -B as in the
 paper; `--no-bias-correction`) -> reorientation to RAS+ and inversion `1 - I/max` as the paper did for its own
@@ -94,8 +100,10 @@ own, with a warning) -> the VALDO-72 U-Net (two seeds averaged) -> the paper's f
 
 Diameter = diameter of the circle with the area of the largest axial cross-section of the component on the 0.5 mm grid;
 size classes < 2 mm, 2-5 mm, > 5 mm (the paper's Table 2 definition). Stage 2 is not run: no classifier trained on
-public data alone exists as a file (`PAPER_VERSION.md`); the result is the paper's stage-1 chain with the fixed cell
-(the n = 0 arm). The same stage-1 recipe reached lesion F1 0.647 in VALDO cross-validation (two seeds + CSF rule).
+public data alone was saved by the paper (`PAPER_VERSION.md`); the default result is the paper's stage-1 chain with
+the fixed cell (the n = 0 arm). `--stage2` adds a stage-2 classifier trained on VALDO alone after the paper (release
+v1.1.0, `cmb get-model valdo_stage2`; CHANGES.md): it decides on the candidates (p > 0.15, >= 1 mm3) instead of the
+fixed cell and fills the `stage2_score` column. The same stage-1 recipe reached lesion F1 0.647 in VALDO cross-validation (two seeds + CSF rule).
 
 ## Train, fine-tune, evaluate, cross-validate
 
@@ -214,7 +222,11 @@ and 1) trained on all 72 VALDO 2021 Task 2 training scans and nothing else, byte
 model. **Licence: CC BY-NC-SA 4.0** (derived from the VALDO data): non-commercial use, share alike, attribution. Cite the
 data: Sudre CH et al., Where is VALDO? VAscular Lesions Detection and segmentatiOn challenge at MICCAI 2021, Medical Image
 Analysis 92 (2024) 103029, doi:10.1016/j.media.2023.103029; dataset doi:10.5281/zenodo.4520773 (with the cohort citations
-listed there). No stage-2 classifier is released (none trained on VALDO alone exists as a file).
+listed there). Release **v1.1.0** (main, after the paper) adds `valdo_stage2_classifier.pt`
+(SHA-256 `ef179dca588ab522a27344c94f6001a7c01a4c701b27655e3808216302d6d4ef`): a stage-2 classifier trained only on the 278
+out-of-fold candidates of the 57 VALDO cross-validation cases (`cmb.stage2.final_classifier`, 3 members, threshold 0.55,
+out-of-fold lesion F1 0.614), same licence and citation; `cmb predict --stage2` uses it. It is not the paper's frozen-V
+classifier, which was never saved.
 
 ## Tests
 
