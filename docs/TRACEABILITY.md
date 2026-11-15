@@ -15,9 +15,9 @@ prints every step with its done-check and its exact command).
 
 | Data | Origin | Licence | What we use | Where it lives on the original machine |
 |---|---|---|---|---|
-| VALDO Task 2 (72 T2*-GRE cases, 3 cohorts, 236 reference CMB) | Sudre et al., "Where is VALDO?", Medical Image Analysis 2024; download Zenodo 10.5281/zenodo.4520773 | CC BY-NC-SA 4.0 (`docs/licence-valdo.md`) | 57 cases in 5 folds for everything (`dev/split.json`, seed 0, `code/split.py`); 15 held out and scored once on 2026-09-28 (`WORKLOG 5ad`) | `~/data/extern/valdo2021/Task2/sub-XXX/` |
-| Momeni / CSIRO SWI (57 cases with 146 reference points) | Momeni et al., CMPB 2021; data DOI 10.25919/AEGY-NY12 | CSIRO Data Licence, non-commercial, no redistribution | external validation only, no training (`WORKLOG 5ae`, `kern: momeni-*`) | `~/data/extern/momeni/` |
-| In-house T2* (75 cases, 828 CMB) and SWI (61 cases, 652 CMB) | clinical BIDS cohort, reference masks by the clinic | never leaves the clinic | own training per modality, candidates for the shared classifier; only sums appear in this repository | `~/data/work/mb-arena/` (`REPLICATION 3`) |
+| VALDO Task 2 (72 T2*-GRE cases, 3 cohorts, 236 reference CMB) | Sudre et al., "Where is VALDO?", Medical Image Analysis 2024; download Zenodo 10.5281/zenodo.4520773 | CC BY-NC-SA 4.0 (`docs/licence-valdo.md`) | 57 cases in 5 folds for everything (`dev/split.json`, seed 0, `code/split.py`); 15 held out and scored once on 2026-09-28 (`WORKLOG 5ad`) | `<valdo>/sub-XXX/` |
+| Momeni / CSIRO SWI (57 cases with 146 reference points) | Momeni et al., CMPB 2021; data DOI 10.25919/AEGY-NY12 | CSIRO Data Licence, non-commercial, no redistribution | external validation only, no training (`WORKLOG 5ae`, `kern: momeni-*`) | `$CMB_MOMENI/` |
+| In-house T2* (75 cases, 828 CMB) and SWI (61 cases, 652 CMB) | clinical BIDS cohort, reference masks by the clinic | never leaves the clinic | own training per modality, candidates for the shared classifier; only sums appear in this repository | `$CMB_PRIVATE/` (`REPLICATION 3`) |
 | Brain masks | VALDO: supplied with the data (cohort 3 is a head mask, `WORKLOG 4.2`); in-house: supplied, HD-BET for 17 T2* cases | -- | mask for the intensity scaling and the metric | `dev/preproc/`, `derivatives/brainmask/` |
 | Tissue maps | FreeSurfer 8.2 `mri_synthseg` (VALDO: on the T1 in T2* space; in-house and Momeni: `--robust` directly on the T2*/SWI) | FreeSurfer licence | CSF rule, tissue feature of the classifier, location of errors | `dev/synthseg/`, `synthseg-*/robust/` |
 
@@ -49,24 +49,24 @@ same steps in the same order. Inputs and outputs are relative to the repository 
 
 | Step (`kern`) | Reads | Command (`REPLICATION` step) | Writes | Establishes | Recorded in |
 |---|---|---|---|---|---|
-| preprocess | `~/data/extern/valdo2021/Task2/` | `code/preprocess.py --all --out dev/preproc --skip-done` (V2) | `dev/preproc/<id>/fast_restore.nii.gz` | FSL FAST -B once per case; never repeated | `WORKLOG 4.9` |
+| preprocess | `<valdo>/` | `code/preprocess.py --all --out dev/preproc --skip-done` (V2) | `dev/preproc/<id>/fast_restore.nii.gz` | FSL FAST -B once per case; never repeated | `WORKLOG 4.9` |
 | preproc-roh | `dev/preproc/` | `code/preproc_roh_bauen.py` (V3) | `dev/preproc_roh/<id>/<id>_image.nii.gz` | inverted image WITHOUT vessel inpainting: +0.136 | `WORKLOG 4.1` |
 | grid | `dev/preproc_roh/` | `GITTER_C_QUELLE=... GITTER_C_ZIEL=dev/gitter_d code/gitter_c_bauen.py --proc 8` (V4) | `dev/gitter_d/<id>/<id>_{image,frst,label}.nii.gz`, `info.json` | 0.5 x 0.5 x 1 mm grid, FRST channel; component count source = target checked per case | `WORKLOG 4.8, 4.11` |
 | manifest | `dev/gitter_d/`, `dev/split.json` | `cmb.transfer.build_valdo_manifest` (V5) | `dev/manifest_valdo_gitter_d.json` | 57 CV cases, 139 lesions; held-out 15 excluded | `WORKLOG 5ad` |
 | synthseg | T1 of VALDO (33 of 72 carry NaN, `nan_to_num` first) | `code/we5.py --synthseg --parallel 4` (V6) | `dev/synthseg/<id>_synthseg.nii.gz` | tissue map on the grid for the CSF rule | `WORKLOG 4.3` |
-| train-basis, train-s1 | `dev/gitter_d/`, manifest | `code/turnier.py --netz a03-aniso --epochen 60 --gitter dev/gitter_d [--seed 1]` (V7) | `ergebnisse/turnier/a03-aniso-e60-gd/fold<k>/{modell.pt,meta.json,verlauf.json,<id>_pred_proba.nii.gz}`, same with `-s1-` | raw 0.585 (seed 42), 0.553 (seed 1) | `WORKLOG 4.5, 5u`; every training command with timestamp and return value in the queue log `grossauftrag-schlange.jsonl` |
+| train-basis, train-s1 | `dev/gitter_d/`, manifest | `code/turnier.py --netz a03-aniso --epochen 60 --gitter dev/gitter_d [--seed 1]` (V7) | `ergebnisse/turnier/a03-aniso-e60-gd/fold<k>/{modell.pt,meta.json,verlauf.json,<id>_pred_proba.nii.gz}`, same with `-s1-` | raw 0.585 (seed 42), 0.553 (seed 1) | `WORKLOG 4.5, 5u`; every training command with timestamp and return value in the queue log `GPU job queue-schlange.jsonl` |
 | ensemble | the two run folders | `cmb.analysis.ensemble --runs ... --out ergebnisse/turnier/ens2-a03-aniso-e60-gd` (V10) | `ens2-.../fold*/<id>_pred_proba.nii.gz` | mean of two seeds | `WORKLOG 5j` |
 | evaluate-basis | run folders, manifest | `cmb.transfer.evaluate --run basis=... s1=... ens2=...` (V8) | stdout, `ergebnisse/analysis/blob_vs_basis_valdo.json` | raw lesion F1 at the fixed cell 0.3 / 2 mm3 | `REPLICATION 4` |
 | csf | run folders, manifest, `dev/synthseg/` | `cmb.analysis.operating_point --run ... --synthseg "dev/synthseg/{id}_synthseg.nii.gz"` (V9) | `ergebnisse/analysis/operating_point_valdo_members.json`, `operating_point_valdo_ensembles.json`, `ensemble2_valdo.json` | **0.647** with CSF rule (ensemble); 0.646 / 0.590 single seeds | `WORKLOG 4.3, 5`; `REPLICATION 5` step 5 and 6 |
 | candidates-valdo | `ergebnisse/turnier/a03-aniso-e60-gd`, grid | `cmb.stage2.candidates --keep-csf --out ergebnisse/stage2/a03-aniso-e60-gd-weich` (S1) | `patches.npy` and the candidate table | 278 candidates at 0.15 / 1 mm3 | `WORKLOG 3a` |
-| stage2-pooled, stage2-transfer | candidate sets of all three cohorts | `cmb.stage2.pooled --cohort valdo=... t2star=... swi=... --models cnn --skip-own --tissue` (S4, S5) | `mb-arena/stage2/pooled_weich_cnn_*.json` | shared 3D CNN: SWI +0.045 [+0.018; +0.085]; VALDO-only classifier transfers zero-shot | `WORKLOG 3a`, `REPLICATION 5` steps 20b, 22 |
+| stage2-pooled, stage2-transfer | candidate sets of all three cohorts | `cmb.stage2.pooled --cohort valdo=... t2star=... swi=... --models cnn --skip-own --tissue` (S4, S5) | `<private>/stage2/pooled_weich_cnn_*.json` | shared 3D CNN: SWI +0.045 [+0.018; +0.085]; VALDO-only classifier transfers zero-shot | `WORKLOG 3a`, `REPLICATION 5` steps 20b, 22 |
 | heldout | the frozen ten model files (`ergebnisse/validierung/heldout_0928/FROZEN.sha256`) | run once on 2026-09-28; the step only prints a reminder | `ergebnisse/validierung/heldout_0928/summary.json` | 0.468 pooled, 0.731 without sub-110, median 0.667 | `WORKLOG 5ad` (rules set in advance) |
-| momeni-grid, momeni-zeroshot, momeni-synthseg, momeni-score | `~/data/extern/momeni/` | `cmb.transfer.build_momeni_grid`, `cmb.transfer.zero_shot`, `cmb.transfer.momeni_synthseg`, `cmb.analysis.operating_point` | `<momeni>/gitter/manifest_momeni.json`, `transfer/zero-shot-valdo-s42/zero_shot.json`, `synthseg/` | external validation 0.613 with CSF rule, 0.630 with the SWI U-Net and the VALDO classifier | `WORKLOG 5ae` arm 4 |
+| momeni-grid, momeni-zeroshot, momeni-synthseg, momeni-score | `$CMB_MOMENI/` | `cmb.transfer.build_momeni_grid`, `cmb.transfer.zero_shot`, `cmb.transfer.momeni_synthseg`, `cmb.analysis.operating_point` | `<momeni>/gitter/manifest_momeni.json`, `transfer/zero-shot-valdo-s42/zero_shot.json`, `synthseg/` | external validation 0.613 with CSF rule, 0.630 with the SWI U-Net and the VALDO classifier | `WORKLOG 5ae` arm 4 |
 | mbnet-prepare, mbnet-finetune, mbnet-score | VALDO raw data, our folds | `cmb.baselines.microbleednet_finetune prepare / finetune --fold k / score --cohort valdo` | `mbnet/valdo/falten/`, `mbnet/valdo/ergebnisse/fold*/lauf.json`, logs `logs/arm6_mbnet_score_*_0929.log` | fair baseline, same cases and metric: VALDO 0.040 native, in-house SWI 0.406, T2* 0.277 | `WORKLOG 5ae` arm 6 |
 | qc-viewer | ensemble run, manifest, tissue maps | `cmb.review.build_slice_viewer --dataset VALDO ... --out ergebnisse/qc/valdo_slices` | `quality_control.html`, `data.json`, `img/` | the pages at mendeltem.github.io/valdo-cmb-qc/ | `WORKLOG 8` |
 
 The in-house path (C1-C10) and the second stage (S1-S6) are tabulated the same way in `docs/REPLICATION.md` sections 3 and 3a;
-the scripts for it are `catalina/*.py`, `cmb/transfer/build_private_grids.py` and the same training and evaluation modules.
+the scripts for it are `inhouse/*.py`, `cmb/transfer/build_private_grids.py` and the same training and evaluation modules.
 
 ## 4 Every number in the README, traced
 
@@ -75,7 +75,7 @@ the scripts for it are `catalina/*.py`, `cmb/transfer/build_private_grids.py` an
 | MicrobleedNet re-implementation on VALDO: **0.245** | 57 CV cases | tournament of ten designs, 40 epochs, `code/turnier.py`, ranking `code/turnier_rangliste.py` | `ergebnisse/turnier/a01-attunet-*` | `WORKLOG 4.4`, `REPLICATION 5` step 1 |
 | our chain, VALDO 5-fold CV, two-seed ensemble + CSF rule: **0.647** | 57 CV cases | V7, V10, V9 | `ergebnisse/analysis/operating_point_valdo_ensembles.json` | `REPLICATION 5` steps 2-7 (the ladder 0.245 -> 0.404 -> 0.470 -> 0.588 -> 0.612 -> 0.647) |
 | held-out 15 cases: **0.468 pooled / 0.731 without one case / median 0.667** | 15 held-out cases, scored once | frozen chain, 2026-09-28 | `ergebnisse/validierung/heldout_0928/summary.json`, `FROZEN.sha256` | `WORKLOG 5ad` |
-| in-house T2* / SWI, own U-Net + shared classifier: **0.671 / 0.672** | 75 / 61 private cases | C5 (own training 0.663 / 0.626), S4-S5 (shared classifier) | `mb-arena/transfer/auswertung_t2star_alle_0920.json`, `auswertung_swi_alle_0920.json`, `mb-arena/stage2/pooled_weich_cnn_swi_s1_0921.json` | `REPLICATION 3, 3a`; `WORKLOG 5e, 5h, 3a` |
+| in-house T2* / SWI, own U-Net + shared classifier: **0.671 / 0.672** | 75 / 61 private cases | C5 (own training 0.663 / 0.626), S4-S5 (shared classifier) | `<private>/transfer/auswertung_t2star_alle_0920.json`, `auswertung_swi_alle_0920.json`, `<private>/stage2/pooled_weich_cnn_swi_s1_0921.json` | `REPLICATION 3, 3a`; `WORKLOG 5e, 5h, 3a` |
 | fine-tuned original on SWI: **0.406** (T2* 0.277, VALDO 0.040) | same folds | `cmb.baselines.microbleednet_finetune` | `logs/arm6_mbnet_score_{valdo,t2star}_0929.log` | `WORKLOG 5ae` arm 6 (its second stage did not learn) |
 | external SWI cohort, no adaptation: **0.613 / 0.630** | Momeni 57 cases | `kern: momeni-*` | `<momeni>/transfer/zero-shot-valdo-s42/zero_shot.json` | `WORKLOG 5ae` arm 4 |
 | seed noise of one training: **~0.08** | three seeds of the identical recipe | V7 with `--seed 1`, `--seed 2` | `ergebnisse/analysis/valdo_seeds_s2_gepoolt*.json` | `WORKLOG 5u`; rule in `REPLICATION 2` |
@@ -88,9 +88,9 @@ bootstrap with 10 000 draws, "confirmed" = the 95 % interval excludes zero): `do
 
 - Per training run and fold: `meta.json` (every recipe parameter, seed, chosen epoch, threshold, duration, VRAM),
   `verlauf.json` (loss and validation per epoch), `modell.pt`, probability maps per case.
-- Per evaluation: a JSON under `ergebnisse/analysis/` or `mb-arena/transfer/auswertung_*.json`; the operating-point and ensemble
+- Per evaluation: a JSON under `ergebnisse/analysis/` or `<private>/transfer/auswertung_*.json`; the operating-point and ensemble
   tools write their inputs (run names, manifest, synthseg pattern) into the file.
-- Every GPU job: the queue log `grossauftrag-schlange.jsonl` with command, timestamp and return value (private machine).
+- Every GPU job: the queue log `GPU job queue-schlange.jsonl` with command, timestamp and return value (private machine).
 - The environment: `env/environment-from-history.yml`, `env/requirements-lock.txt`, `docs/environment/` (conda `dl` and `shiva`,
   hardware, FreeSurfer 8.2.0, FSL 6.0.7.23).
 - Backup copies of every changed script before 2026-09-20 with the date in the file name (`*.vor-*`), since then git.

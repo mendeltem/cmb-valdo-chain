@@ -42,7 +42,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 CONNECTIVITY_26 = np.ones((3, 3, 3), bool)
 THRESHOLD, MIN_MM3, MAX_VOXELS, VOXEL_MM3 = 0.3, 2.0, 2100, 0.25

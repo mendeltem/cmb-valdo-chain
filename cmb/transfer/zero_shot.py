@@ -7,6 +7,10 @@ maps are written in the same layout as a training run, so ``cmb.transfer.evaluat
 
     python -m cmb.transfer.zero_shot --models ergebnisse/turnier/a03-aniso-e60-gd --net a03-aniso \
         --manifest <other-cohort>/gitter/manifest.json --out <other-cohort>/transfer/zero-shot
+
+--own-fold (Arena 2, 2026-10-25): predict every case ONLY with the model of its own fold (the fold in which it was a test case),
+not with the mean of all five. Needed for modified copies of TRAINING cases (cmb.synthesis.insert_volume): four of the five fold
+models were trained on the unmodified host, so their mean would be an in-sample prediction.
 """
 from __future__ import annotations
 
@@ -19,7 +23,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 
 
@@ -29,12 +33,13 @@ def main() -> None:
     parser.add_argument("--net", required=True, help="architecture name as used in code/netze.py")
     parser.add_argument("--manifest", nargs="+", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--own-fold", action="store_true", help="each case only with fold<its fold>/modell.pt (out-of-fold)")
     parser.add_argument("--landmarks", default="dev/landmarken_valdo.json",
-                        help="Reference file for --norm landmarken; MUST be the same one used for training")
+                        help="Referenzdatei fuer --norm landmarken; MUSS dieselbe sein wie beim Training")
     parser.add_argument("--norm", choices=["max", "z", "p995", "landmarken"], default="max",
-                        help="Intensity scale; MUST match the one used for training. max = divided by the maximum inside the brain (default, as in the original). "
-                             "landmarken is the measured best alignment (contrast span 0.018 vs 0.060 today), z the worst "
-                             "of six (0.362) -- WORKLOG.md 5aa.")
+                        help="Intensitaetsskala; MUSS zu der des Trainings passen. max = durch das Maximum im Hirn (Vorgabe, wie im Original). "
+                             "landmarken ist die gemessen beste Angleichung (Kontrast-Spanne 0.018 gegen 0.060 heute), z die schlechteste "
+                             "von sechs (0.362) -- ARBEIT.md 5aa.")
     args = parser.parse_args()
     import cv5                                   # legacy inference code (sliding window with half stride)
     import turnier
@@ -59,13 +64,14 @@ def main() -> None:
 
     for number, case in enumerate(cases, 1):
         record = cv5.FA["recs"][case["id"]]
-        mean = np.mean([cv5.proba_fall(net, case["id"], nch=2)[0] for net in nets], axis=0)      # (z, y, x)
+        members = [nets[case["fold"]]] if args.own_fold else nets
+        mean = np.mean([cv5.proba_fall(net, case["id"], nch=2)[0] for net in members], axis=0)   # (z, y, x)
         folder = f"{args.out}/fold{case['fold']}"; os.makedirs(folder, exist_ok=True)
         back = np.ascontiguousarray(mean.transpose(2, 1, 0))                                     # -> (x, y, z)
         nib.save(nib.Nifti1Image(np.round(back * 255).astype(np.uint8), record["affine"]),
                  f"{folder}/{case['id']}_pred_proba.nii.gz")
         print(f"[{number}/{len(cases)}] {case['id']}  max probability {mean.max():.2f}", flush=True)
-    json.dump(dict(models=models_dir, net=args.net, manifests=args.manifest, ensemble_of=5),
+    json.dump(dict(models=models_dir, net=args.net, manifests=args.manifest, ensemble_of=1 if args.own_fold else 5, own_fold=args.own_fold),
               open(f"{args.out}/zero_shot.json", "w"), indent=1)
 
 

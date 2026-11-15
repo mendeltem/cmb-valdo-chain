@@ -1,9 +1,9 @@
-# Overview of all tests of the CMB pipeline (state 2026-09-29, 08:15) and the best chain for catalina
+# Overview of all tests of the CMB pipeline (state 2026-09-29, 08:15) and the best chain for inhouse
 
 All figures are lesion-wise F1 (pooled, 26-connectivity, touch rule), paired across cases with bootstrap; "confirmed" =
-95% interval excludes zero. VALDO = 57 CV cases, catalina-T2* = 75 cases / 828 CMB, catalina-SWI = 61 / 652.
+95% interval excludes zero. VALDO = 57 CV cases, inhouse-T2* = 75 cases / 828 CMB, inhouse-SWI = 61 / 652.
 Noise level: single seed of the U-Net ~0.08 (three seeds 0.646 / 0.590 / 0.578), second stage sd 0.003-0.009 (10 seeds).
-Sources: WORKLOG.md (section numbers in parentheses), mb-arena/protokoll.md, REPLICATION.md.
+Sources: WORKLOG.md (section numbers in parentheses), <private>/protokoll.md, REPLICATION.md.
 
 ## 1 What was measured
 
@@ -26,33 +26,33 @@ Sources: WORKLOG.md (section numbers in parentheses), mb-arena/protokoll.md, REP
 |---|---|---|
 | Tournament 9 networks, 40 ep. (4.4) | a03-aniso 0.404 raw vs Attention U-Net 0.245: **+0.159 confirmed**; swin, resse, segres, flat confirmed worse | a03-aniso |
 | nnU-Net / Attention U-Net on clean data, 60 ep. (5s) | 0.458 / 0.463 vs 0.585 raw | a03-aniso stays |
-| Epochs 60 vs 120 (5h) | VALDO -0.029 raw, catalina-T2* -0.022 confirmed | 60 ep. |
+| Epochs 60 vs 120 (5h) | VALDO -0.029 raw, inhouse-T2* -0.022 confirmed | 60 ep. |
 | last checkpoint instead of selection on inner fold (5o) | mean drops 0.618 -> 0.604 | checkpoint selection stays |
 | Patch 24 / recipe / 48 mm (5t) | 0.369 / 0.585 / 0.569 (24 mm -0.216 confirmed) | 38 x 31 x 47 mm |
 | ratio positive:negative 1:2 (5g) | collapses (empty prediction) | 60/25/15 stays |
 | Augmentation rotation/scale/contrast (4.7, 5p) | thick-slice -0.127, intensity -0.108; zero-shot likewise negative | mirroring only |
-| blob loss (5j) | -0.044 n.s.; catalina-T2* -0.029 confirmed; SWI -0.003 (small CMB 0.37 -> 0.44) | no |
+| blob loss (5j) | -0.044 n.s.; inhouse-T2* -0.029 confirmed; SWI -0.003 (small CMB 0.37 -> 0.44) | no |
 | Centre map as auxiliary output (5k) | -0.054 confirmed | no |
 | fnrw loss (5l) | -0.030 n.s. | no |
 | hard negatives online (5l) | +0.000 | no |
 | synthetic bleeds + mimics, 1st version (5ae arm 1) | ensemble **-0.130 confirmed**; mimics rated 0.00 by both models | no |
 | synthetic bleeds, budget preserved, 2nd version (5ae-1b) | ensemble **-0.072 confirmed**; sensitivity small 0.50 -> 0.57, FP 0.82 -> 1.21 | no, arm closed |
 | Ensemble over seeds (5e, 5u) | ~ best member, +0.02-0.04 above the mean, flattens after 2 | **ship 2 seeds** |
-| Mirror TTA (5e) | VALDO +0.02, catalina-T2* -0.002 | no |
+| Mirror TTA (5e) | VALDO +0.02, inhouse-T2* -0.002 | no |
 
-### Transfer to catalina (first stage)
-| Strategy | catalina-T2* | catalina-SWI | Verdict |
+### Transfer to inhouse (first stage)
+| Strategy | inhouse-T2* | inhouse-SWI | Verdict |
 |---|---|---|---|
 | VALDO model zero-shot | 0.622 (s1 0.638) | 0.305 (s1 0.311) | reference value |
 | own training 60 ep. | **0.663** | **0.626** | **baseline** |
 | fine-tuning from the VALDO model, 30 ep. | = own training | rather worse | no |
-| mixed VALDO + catalina, equal budget per case (5h) | 0.641 (e120), +0.001 vs own e120 | -- | no |
+| mixed VALDO + inhouse, equal budget per case (5h) | 0.641 (e120), +0.001 vs own e120 | -- | no |
 | pretraining on all + fine-tuning (5e) | -0.039 confirmed | -0.045 confirmed | no |
 | mixed with landmarks (5ac) | 0.630 | -- | no |
 | second seed own training | -- | s1 0.613 (-0.022 n.s.) | ensemble sensible, not measured |
 
 ### Second stage (candidates from threshold 0.15 / 1 mm3, `--keep-csf`)
-| Variant | VALDO | catalina-T2* | catalina-SWI | Verdict |
+| Variant | VALDO | inhouse-T2* | inhouse-SWI | Verdict |
 |---|---|---|---|---|
 | threshold only (fixed cell 0.3 / 2 mm3) | 0.585 raw | 0.654 | 0.626 | reference |
 | + hard CSF rule (4.3) | **0.646** (+0.06, 0 TP lost) | 0.670 | 0.614 (deletes 74 real ones) | VALDO/T2* yes, SWI **never** |
@@ -80,7 +80,7 @@ Sources: WORKLOG.md (section numbers in parentheses), mb-arena/protokoll.md, REP
 CPU pre-check of the intensity alignment (5aa/5ac): ranking disproved by the GPU run. Candidate ceiling (5w/5y): a higher ceiling
 brought nothing. Robustness probe (5v): confirmed once. All three describe, none decides.
 
-## 2 The best chain for catalina (highest measured F1)
+## 2 The best chain for inhouse (highest measured F1)
 
 **Preprocessing (per case, both sequences the same):** HD-BET brain mask; FSL FAST -B bias correction (once); inverted scale
 1 - I / max in the brain (no z-normalisation, no landmarks, no p99.5); NO vessel inpainting; resampling to 0.5 x 0.5 x 1.0 mm,
@@ -91,7 +91,7 @@ linear, brain crop (`code/gitter_c_bauen.py`, `cmb.transfer.build_private_grids`
 parameters, input T2*/SWI + FRST), 60 epochs, patches 38 x 31 x 47 mm, 800 per epoch, sampling 60% lesion / 25% brain /
 15% arbitrary, mirroring only, AdamW 3e-4 with cosine schedule, BCE + Dice with deep supervision, checkpoint chosen on the
 inner fold. Measured: T2* 0.663, SWI 0.626 (threshold alone). To ship: mean of the five fold models, and if possible two
-seeds averaged (not measured on catalina; on VALDO +0.02-0.04 above the mean, and which seed comes out ahead cannot be known in advance).
+seeds averaged (not measured on inhouse; on VALDO +0.02-0.04 above the mean, and which seed comes out ahead cannot be known in advance).
 
 **Post-processing stage 1:** threshold 0.3, minimum size 2 mm3, giant components removed (fixed cell; cross-wise selection varies by 0.02-0.05).
 
@@ -99,13 +99,13 @@ seeds averaged (not measured on catalina; on VALDO +0.02-0.04 above the mean, an
 3D CNN on the pool of all cohorts (`cmb.stage2.pooled --models cnn`, 16-mm cube from image + FRST + probability, three
 members averaged, threshold per cohort from inner folds). Measured: **T2* 0.671, SWI 0.672**. On T2* the hard
 CSF rule is equivalent (0.670) and cheaper; on SWI the hard rule must NOT run (0.614, deletes 74 real bleeds).
-If catalina alone counts: the two-scale CNN (16 + 28 mm) is at 0.687-0.691 on T2* (+0.016 / +0.019, confirmed once)
+If inhouse alone counts: the two-scale CNN (16 + 28 mm) is at 0.687-0.691 on T2* (+0.016 / +0.019, confirmed once)
 and at 0.678-0.686 on SWI (+0.013 / +0.016 n.s.) -- discarded following the VALDO rule (there -0.030), for a pure
-catalina release the highest measured figure, but only robust with further seeds.
+inhouse release the highest measured figure, but only robust with further seeds.
 
 **Publishable variant (without private candidates in training):** VALDO classifier zero-shot (`cmb.stage2.apply`):
 SWI 0.671 (equal), T2* 0.648 (-0.022, because the VALDO threshold 0.50 is too strict for T2* -- a locally chosen threshold
 would presumably close this, but it is not measured).
 
 **Do not do:** mixing or fine-tuning the U-Net between cohorts; hard CSF rule on SWI; z-normalisation / landmarks;
-augmentation other than mirroring; 120 epochs; blob / centre / fnrw; TTA on catalina; synthetic bleeds.
+augmentation other than mirroring; 120 epochs; blob / centre / fnrw; TTA on inhouse; synthetic bleeds.

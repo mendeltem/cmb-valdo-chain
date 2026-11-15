@@ -1,53 +1,54 @@
 #!/usr/bin/env python3
-"""we1: build split, stats, cases.
+"""we1: split, stats, cases bauen.
 
-Stratification: cohort (prefix sub-1/2/3) x THREE load classes
-(0 / 1-2 / >=3 CMB), NOT four -- with four, 3 of 12 cells are empty.
+Stratifizierung: Kohorte (Praefix sub-1/2/3) x DREI Lastklassen
+(0 / 1-2 / >=3 CMB), NICHT vier -- bei vier sind 3 von 12 Zellen leer.
 
-Validation: 15 cases (~20 %), per cohort a share of ~20 % (cohort1 3, cohort2 7,
-cohort3 5), every cohort and every occupied cell represented, cases by CMB load.
-Cohort 1 MUST be included (15 % of the cases, 45 % of all bleeds).
-It is not touched up to we5.
+Validierung: 15 Faelle (~20 %), je Kohorte ein Teil von ~20 % (Ko1 3, Ko2 7,
+Ko3 5), jede Kohorte und jede besetzte Zelle vertreten, Faelle nach CMB-Last.
+Kohorte 1 MUSS drin sein (15 % der Faelle, 45 % aller Blutungen).
+Bis we5 wird sie nicht angefasst.
 
-Folds: 5, same stratification -- every cohort x class cell is distributed as
-evenly as possible over the 5 folds (remaining cases land in folds
-0..remainder-1). Within a cell: the fold's CMB sum is balanced greedily
-(next case into the fold with the smallest CMB sum). Seed 0. On a
-misallocation: swap, no other seed.
+Falten: 5, gleiche Stratifizierung -- jede Kohorte x Klasse-Zelle wird so
+gleich wie moeglich ueber die 5 Falten verteilt (Restfaelle landen in
+Falten 0..Rest-1). Innerhalb der Zelle: CMB-Summe der Falte gierig
+ausgleichen (naechster Fall in die Falte mit der kleinsten CMB-Summe).
+Seed 0. Bei Fehlbelegung: Tausch, kein anderer Seed.
 
-No seed knob for the balance: cohort 3 has only 34 CMB in 27 cases (26 with
-1-2), and cohort 1 has only TWO cases in class 1 (1-2: sub-107 with 2,
-sub-102 with 1 -- the earlier line "NO case in class 1" was wrong,
-corrected 11 Sep). A fold without a positive cohort-1 case cannot be
-avoided if cohort 1 has only 8 positive cases and 5 folds exist; the greedy
-balance ensures that EVERY fold contains at least one cohort-1 case and at
-least one positive case.
+Kein Seed-Knopf fuer die Ausgewogenheit: die Kohorte 3 hat nur 34 CMB in
+27 Faellen (26 mit 1-2), und Kohorte 1 hat nur ZWEI Faelle in Klasse 1
+(1-2: sub-107 mit 2, sub-102 mit 1 -- die fruehere Zeile "KEINE Falle in
+Klasse 1" war falsch, korrigiert 11.09.). Eine Falte ohne positiven
+Kohorte-1-Fall laesst sich nicht vermeiden, wenn Kohorte 1 nur 8 positive
+Faelle hat und 5 Falten existieren; der gierige Ausgleich stellt sicher,
+dass JEDE Falte mindestens einen Kohorte-1-Fall und mindestens einen
+positiven Fall enthaelt.
 
-STATUS 11 Sep 2026 (user decision, Claude) -- THE VALID SPLIT IS THE OLD
-SEED-0 STATE, exactly what this code produces:
-- The text "highest CMB first" (above, in the code comment and in "regel"
-  in split.json) was NEVER implemented: the code does not sort, the order
-  is purely the seed-0 shuffle per cohort, and the folds get the remaining
-  cases in inventory order. The text stays in "regel" because split.json
-  must remain byte-identical.
-- Result: validation 15 cases / 97 of 236 CMB (cohort1: sub-109/0,
-  sub-102/1, sub-110/73 -> 74 of the 106 cohort-1 bleeds), folds
-  [32, 26, 39, 18, 24] CMB. The validation set was never predicted.
-- A re-split was built on 11 Sep and DISCARDED: literally "highest first"
-  would have put 166/236 CMB into validation; the representative variant
-  (median rank per cell, LPT folds) 37 CMB -- but 13 of its 15 validation
-  cases were already in the folds in the old split, i.e. already
-  trained/tested in we2/we3 (Optuna, learning curves, cv5). The old
-  validation set is the only one never touched.
-  Discarded states: dev/{split,cases,stats}.neusplit-verworfen-0911.json,
-  dev/split.py.neusplit-verworfen-0911. This file is once again the code
-  of the valid split (dev/split.py.vor-neusplit-0911), only comments
-  corrected.
+STAND 11.09.2026 (Nutzerentscheidung, Claude) -- DER GUELTIGE SPLIT IST
+DER ALTE SEED-0-STAND, genau das, was dieser Code erzeugt:
+- Der Text "hoechste CMB zuerst" (oben, im Code-Kommentar und in "regel"
+  in split.json) wurde NIE umgesetzt: der Code sortiert nicht, die
+  Reihenfolge ist allein die Seed-0-Mischung je Kohorte, die Falten
+  bekommen die Restfaelle in Inventar-Reihenfolge. Der Text bleibt in
+  "regel" stehen, weil split.json byteidentisch bleiben muss.
+- Ergebnis: Validierung 15 Faelle / 97 von 236 CMB (Ko1: sub-109/0,
+  sub-102/1, sub-110/73 -> 74 der 106 Ko1-Blutungen), Falten
+  [32, 26, 39, 18, 24] CMB. Die Validierung wurde nie vorhergesagt.
+- Ein Neusplit wurde am 11.09. gebaut und VERWORFEN: woertlich
+  "hoechste zuerst" haette 166/236 CMB in die Validierung gelegt; die
+  repraesentative Variante (je Zelle Median-Rang, Falten LPT) 37 CMB --
+  aber 13 ihrer 15 Validierungsfaelle lagen im alten Split in den Falten,
+  waren also in we2/we3 (Optuna, Lernkurven, cv5) schon trainiert/getestet.
+  Die alte Validierung ist die einzige nie angefasste Menge.
+  Verworfene Staende: dev/{split,cases,stats}.neusplit-verworfen-0911.json,
+  dev/split.py.neusplit-verworfen-0911. Diese Datei ist wieder der Code
+  des gueltigen Splits (dev/split.py.vor-neusplit-0911), nur Kommentare
+  korrigiert.
 """
 import json, random
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
-VALDO = "/home/uchralt/data/extern/valdo2021/Task2"
+ROOT = os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+VALDO = os.environ.get("CMB_VALDO", os.path.join(ROOT, "data", "valdo2021", "Task2"))
 PREPROC = f"{ROOT}/dev/preproc"
 
 def klass(n):
@@ -64,10 +65,10 @@ def main():
     assert sum(len(v) for v in byc.values()) == 72
     tot_cmb = sum(c["n_cmb"] for c in inv)
 
-    # --- Validation: ~20 % per cohort (cohort1 3, cohort2 7, cohort3 5 = 15),
-    #     every cohort and every occupied cell represented. (The earlier text
-    #     "highest load first" was never implemented -- the seed-0 order
-    #     applies, see STATUS 11 Sep in the docstring.)
+    # --- Validierung: ~20 % je Kohorte (Ko1 3, Ko2 7, Ko3 5 = 15),
+    #     jede Kohorte und jede besetzte Zelle vertreten. (Der fruehere Text
+    #     "hoechste Last zuerst" wurde nie umgesetzt -- es gilt die
+    #     Seed-0-Reihenfolge, siehe STAND 11.09. im Docstring.)
     val_target = {"1": 3, "2": 7, "3": 5}
     val = []
     used = set()
@@ -75,11 +76,11 @@ def main():
         cells = {}
         for c in byc[koh]:
             cells.setdefault(klass(c["n_cmb"]), []).append(c)
-        # one round per occupied cell (1 case each, the first in seed-0 order)
+        # eine Runde je besetzte Zelle (je 1 Fall, der erste in Seed-0-Reihenfolge)
         for kl in sorted(cells):
             c = cells[kl][0]
             val.append(c); used.add(c["id"])
-        # remainder up to the target, in seed-0 order (not sorted by load)
+        # Rest bis zum Ziel, in Seed-0-Reihenfolge (nicht nach Last sortiert)
         rest = [c for c in byc[koh] if c["id"] not in used]
         for c in rest:
             if sum(1 for v in val if v["kohorte"] == koh) >= t:
@@ -91,12 +92,12 @@ def main():
     rest = [c for c in inv if c["id"] not in used]
     assert len(rest) == 57
 
-    # --- Folds: every cohort x class cell distributed as evenly as
-    #     possible over the 5 folds (cap ceil(n/5) per fold), within the
-    #     cell greedily by CMB sum: next case into the fold with the
-    #     smallest CMB sum under the cap. Cells in a fixed order, so that
-    #     small cells (cohort 1) are distributed first when all sums are
-    #     equal -- then every fold gets one case.
+    # --- Falten: jede Kohorte x Klasse-Zelle so gleich wie moeglich ueber
+    #     die 5 Falten (Kappe ceil(n/5) je Falte), innerhalb der Zelle
+    #     gierig nach CMB-Summe: naechster Fall in die Falte mit der
+    #     kleinsten CMB-Summe unter der Kappe. Zellen in fixer Reihenfolge,
+    #     damit kleine Zellen (Kohorte 1) zuerst verteilt werden, wenn
+    #     alle Summen gleich sind -- dann bekommt jede Falte einen Fall.
     folds = [[] for _ in range(5)]
     cells = {}
     for c in rest:
@@ -105,10 +106,10 @@ def main():
     for zell in sorted(cells):
         zellk, zelll = zell
         lst = cells[zell]
-        # Greedy per cell: next case into the fold with the SMALLEST
-        # number of cases of this cell (so that every cell appears in
-        # all/as many folds as possible), then smallest CMB sum (the
-        # required CMB balance), then fold index.
+        # Gierig pro Zelle: naechster Fall in die Falte mit der KLEINSTEN
+        # Anzahl an Faellen dieser Zelle (dadurch steht jede Zelle in
+        # allen/moeglichst vielen Falten), dann kleinste CMB-Summe (der
+        # geforderte CMB-Ausgleich), dann Faltenindex.
         for c in lst:
             def key(i, zk=zellk, zl=zelll):
                 n_cell = len([x for x in folds[i] if x["kohorte"] == zk
@@ -117,15 +118,15 @@ def main():
             folds[sorted(range(5), key=key)[0]].append(c)
     assert sum(len(f) for f in folds) == 57
 
-    # --- Check from task 4: every fold has a cohort-1 case AND a
-    #     positive case. On violation: swap (no other seed).
+    # --- Kontrolle aus Aufgabe 4: jede Falte hat Kohorte-1-Fall UND
+    #     positiven Fall. Bei Verstoß: Tausch (kein anderer Seed).
     ok = all(any(c["kohorte"] == "1" for c in f) and any(c["n_cmb"] > 0 for c in f) for f in folds)
     if not ok:
         for i, f in enumerate(folds):
             if not any(c["kohorte"] == "1" for c in f):
-                # Fetch a cohort-1 case from another fold: swap with the
-                # cohort-1 case of the fold with the largest CMB distance
-                # from its own mean, keeping the CMB sum as close as possible.
+                # Kohorte-1-Fall aus einer anderen Falte holen: tauschen mit
+                # dem kohorte-1-Fall der Falte mit dem hoechsten CMB-Abstand
+                # zum eigenen Mittel, CMB-Summe so nah wie moeglich halten.
                 donor = max(range(5), key=lambda j: sum(c["n_cmb"] for c in folds[j]))
                 c1 = next(c for c in folds[donor] if c["kohorte"] == "1")
                 cswap = min(f, key=lambda c: abs(c["n_cmb"] - c1["n_cmb"]))
@@ -139,7 +140,7 @@ def main():
                 folds[donor][folds[donor].index(pos)] = cswap
                 f[f.index(cswap)] = pos
         ok = all(any(c["kohorte"] == "1" for c in f) and any(c["n_cmb"] > 0 for c in f) for f in folds)
-        assert ok, "fold correction via swap not possible"
+        assert ok, "Faltenkorrektur durch Tausch nicht moeglich"
 
     # --- split.json
     ids = lambda cs: [c["id"] for c in cs]
@@ -155,7 +156,7 @@ def main():
     }
     json.dump(split, open(f"{ROOT}/dev/split.json", "w"), indent=1, ensure_ascii=False)
 
-    # --- stats.json: n and CMB sum per cohort x class x set/fold
+    # --- stats.json: n und CMB-Summe je Kohorte x Klasse x Set/Falte
     def agg(cs):
         d = {}
         for c in cs:
@@ -181,7 +182,7 @@ def main():
     }
     json.dump(stats, open(f"{ROOT}/dev/stats.json", "w"), indent=1, ensure_ascii=False)
 
-    # --- cases.json in the structure of code/metric.py:
+    # --- cases.json in der Struktur von code/metric.py:
     #     {"t2star": {"cases": [{"id","fold","klass","mask","image","frst"},...]}}
     fold_of = {}
     for i, f in enumerate(folds):
@@ -208,7 +209,7 @@ def main():
     for i, f in enumerate(folds):
         print(f"fold{i}: n={len(f)} cmb={sum(c['n_cmb'] for c in f)} "
               + " ".join(f"ko{k}={sum(c['kohorte'] == k for c in f)}" for k in ("1", "2", "3")))
-    print("check ko1+positive per fold:", ok)
+    print("kontrolle ko1+positiv je Falte:", ok)
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-"""Arm 5 (WORKLOG.md 5ae, 2026-09-29): are false alarms vessels running through many slices?  Dark run length along z.
+"""Arm 5 (ARBEIT.md 5ae, 2026-09-29): are false alarms vessels running through many slices?  Dark run length along z.
 
 For every candidate (component of the out-of-fold probability map at 0.15 / >= 1 mm3 -- the second stage's candidates):
   * z_extent_mm      : through-plane extent of the thresholded component itself;
@@ -18,7 +18,7 @@ from multiprocessing import Pool
 import nibabel as nib, numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 N26 = np.ones((3, 3, 3), bool)
 CAND_T, CAND_MM3, FIX_T, FIX_MM3, MAX_VOX, VOX = 0.15, 1.0, 0.3, 2.0, 2100, 0.25
 CSF = {4, 5, 14, 15, 24, 43, 44}

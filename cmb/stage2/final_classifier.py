@@ -34,7 +34,7 @@ from cmb.stage2.apply import load, per_case, pooled_f1
 from cmb.stage2.classifier import CROP, JITTER, THRESHOLDS, fit_predict_cnn
 from cmb.stage2.pooled import best_threshold, scores_of
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 CSF_LABELS = (4, 5, 14, 15, 24, 43, 44)
 
 

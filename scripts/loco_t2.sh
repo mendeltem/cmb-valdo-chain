@@ -1,11 +1,11 @@
 #!/bin/bash
 # Leave-one-cohort-out over the four T2* cohorts (VALDO 1/2/3, in-house T2*): train on three (all cases, seed 42, 60 epochs, last state),
 # predict the left-out cohort, score stage 1 (fixed cell, CSF rule, cross-selected) and stage 2 (released classifier). User question 2026-10-07 17:40.
-R=/home/uchralt/data/work/valdo-t2s; MB=/home/uchralt/data/work/mb-arena; P=/home/uchralt/miniconda3/envs/dl/bin/python; G=/home/uchralt/local_agentic_system/system/werkzeuge/grossauftrag
+R=<repo>; MB=<private>; P=python; G=${CMB_QUEUE:?set CMB_QUEUE to your GPU job queue command}
 F=$R/ergebnisse/loco_t2; mkdir -p $F; cd $R
 log(){ echo "### $(date '+%F %T') $*"; }
-declare -A SYN=([valdo-1]="dev/synthseg/{id}_synthseg.nii.gz" [valdo-2]="dev/synthseg/{id}_synthseg.nii.gz" [valdo-3]="dev/synthseg/{id}_synthseg.nii.gz" [charite-t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz")
-for k in valdo-1 valdo-2 valdo-3 charite-t2; do
+declare -A SYN=([valdo-1]="dev/synthseg/{id}_synthseg.nii.gz" [valdo-2]="dev/synthseg/{id}_synthseg.nii.gz" [valdo-3]="dev/synthseg/{id}_synthseg.nii.gz" [inhouse-t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz")
+for k in valdo-1 valdo-2 valdo-3 inhouse-t2; do
   log "train without $k"; $G --vram 20 -- $P -m cmb.training.full_data train --manifest dev/loco_t2/train_without_$k.json --out $F/without_$k/seed42 --seed 42; echo "rc=$?"
   log "predict $k"; $G --vram 20 -- $P -m cmb.training.full_data predict --models $F/without_$k/seed42/modell.pt --manifest dev/loco_t2/test_$k.json --out $F/pred_$k; echo "rc=$?"
   log "score $k"
@@ -26,7 +26,7 @@ nets=[]
 for sd in b['members']:
     n=build_net(nn); n.load_state_dict(sd); nets.append(n.eval().to(dev))
 out={}
-for k in ['valdo-1','valdo-2','valdo-3','charite-t2']:
+for k in ['valdo-1','valdo-2','valdo-3','inhouse-t2']:
     info, patches, rows, y, fold, n_ref, n_cases = load(f'ergebnisse/loco_t2/stage2_{k}')
     z0,y0,x0=((s-c)//2 for s,c in zip(patches.shape[-3:],CROP))
     x=torch.from_numpy(np.ascontiguousarray(patches[..., z0:z0+CROP[0], y0:y0+CROP[1], x0:x0+CROP[2]], dtype=np.float32))

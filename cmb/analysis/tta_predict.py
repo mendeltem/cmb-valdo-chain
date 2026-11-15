@@ -29,7 +29,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 
 SPATIAL_AXES = (2, 3, 4)                                     # (batch, channel, z, y, x)

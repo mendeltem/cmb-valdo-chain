@@ -29,7 +29,7 @@ from typing import Callable, Dict, List, Sequence
 
 import numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 CROP = (16, 32, 32)                      # (z, y, x) voxels fed to the CNN; stored patches are (20, 40, 40) or larger
 JITTER = (2, 4, 4)                       # training: random offset of the crop around the patch centre, +- voxels
 COARSE_CROP = (14, 28, 28)               # two-scale CNN: crop of the HALVED patch = 28 mm cube at 1 x 1 x 2 mm (needs --half 32 32 16)
@@ -85,9 +85,9 @@ def features_of(patch: np.ndarray, row: Dict, threshold: float) -> List[float]:
     return [row["probability"], float(prob[core].mean()), float(np.log(row["voxels"])), float(frst[core].max()),
             contrast, extent_in_plane, extent_through, max(extent_in_plane, extent_through) / max(min(extent_in_plane, extent_through), 0.5),
             row["voxels"] / max(dz * dy * dx, 1), float((image == 0).mean()),
-            # Stability under mirroring: real microbleeds change hardly at all, false alarms strongly (factor 7; AUC 0.711,
-            # measured 2026-09-23). If the TTA map is missing, this is zero here -- then the feature contributes nothing,
-            # instead of letting the call fail.
+            # Stabilitaet unter Spiegelung: echte Blutungen aendern sich kaum, Fehlalarme stark (Faktor 7; AUC 0.711,
+            # gemessen 2026-09-23). Fehlt die TTA-Karte, stehen hier Nullen -- dann traegt das Merkmal nichts bei,
+            # statt den Aufruf scheitern zu lassen.
             float(row.get("tta_probability", 0.0)), float(row.get("tta_delta", 0.0))]
 
 
@@ -106,6 +106,21 @@ def fit_predict_features(kind: str) -> Callable:
         else:
             model = RandomForestClassifier(n_estimators=400, min_samples_leaf=3, class_weight="balanced", random_state=seed, n_jobs=4)
         return model.fit(train_x, train_y).predict_proba(test_x)[:, 1]
+    return run
+
+
+def fit_predict_ensemble():
+    """CPU arm (Schleife R01, 2026-11-04): mean of the three feature models' out-of-fold scores.
+
+    Cho 2026 and the VALDO challenge (Sudre 2024) both show the ensemble of several
+    classifiers beats the best single one; Al-Masni 2020's cascade is the same idea at
+    the channel level. Each member is the exact model of ``fit_predict_features`` with the
+    same seed, so the ensemble is a deterministic combination of models we already trust;
+    it adds no feature and no patch, so it runs on CPU and needs no GPU."""
+    def run(train_x, train_y, test_x, seed=0):
+        scores = [fit_predict_features(k)(train_x, train_y, test_x, seed=seed)
+                  for k in ("logistic", "forest", "boosting")]
+        return np.mean(scores, axis=0)
     return run
 
 
@@ -237,13 +252,13 @@ def fit_predict_cnn_pretrained(train_x, train_y, test_x, seed=0, epochs=40, pret
     optimiser = torch.optim.AdamW(list(enc.parameters()) + list(dec.parameters()), lr=1e-3, weight_decay=1e-4)
     schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=max(pretrain_epochs, 1))
     verlust = nn.MSELoss()
-    for _ in range(pretrain_epochs):                                    # ---- 1) without labels: fill gaps
+    for _ in range(pretrain_epochs):                                    # ---- 1) ohne Etiketten: Luecken fuellen
         enc.train(); dec.train()
         order = rng.permutation(len(train_x))
         for start in range(0, len(order), 16):
             idx = order[start:start + 16]
             ziel = []
-            for i in idx:                                               # same offset and same mirroring as during classification
+            for i in idx:                                               # gleicher Versatz und gleiche Spiegelungen wie beim Klassifizieren
                 shift = [b - j + rng.randint(0, 2 * j + 1) for b, j in zip(base, JITTER)]
                 p = train_x[i][:, shift[0]:shift[0] + CROP[0], shift[1]:shift[1] + CROP[1], shift[2]:shift[2] + CROP[2]]
                 for axis in (1, 2, 3):
@@ -258,7 +273,7 @@ def fit_predict_cnn_pretrained(train_x, train_y, test_x, seed=0, epochs=40, pret
         schedule.step()
     vortrainiert = {k: v.detach().clone() for k, v in enc.state_dict().items()}
 
-    scores = np.zeros(len(test_x), np.float32)                          # ---- 2) with labels: fine-tune
+    scores = np.zeros(len(test_x), np.float32)                          # ---- 2) mit Etiketten: fein abstimmen
     test = torch.from_numpy(np.ascontiguousarray(centre_crop(test_x), dtype=np.float32)).to(device)
     for member in range(3):
         torch.manual_seed(seed * 10 + member); rng = np.random.RandomState(seed * 10 + member)
@@ -447,7 +462,7 @@ if __name__ == "__main__":
 def fit_predict_cnn_transfer(source_x, source_y, finetune_x, finetune_y, test_x, seed=0, epochs=40, finetune_epochs=20,
                              finetune_lr=3e-4, cache=None):
     """The plain CNN (same layers, crop, jitter, flips and three averaged members as ``fit_predict_cnn``), but trained in
-    two steps (user idea 2026-09-28, WORKLOG.md 5ae arm 4): PRE-TRAINED on the candidates of a source cohort (VALDO, public),
+    two steps (user idea 2026-09-28, ARBEIT.md 5ae arm 4): PRE-TRAINED on the candidates of a source cohort (VALDO, public),
     then FINE-TUNED on the candidates of the target cohort with a smaller learning rate. With an empty fine-tuning set the
     pre-trained network is used as is (zero-shot transfer of the classifier). Why: the pooled classifier needs the private
     candidates at training time and cannot be published; this recipe can -- U-Net and classifier trained on VALDO,

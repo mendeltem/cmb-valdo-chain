@@ -15,7 +15,7 @@ Output per cohort:
     python -m cmb.analysis.fp_location --run ergebnisse/turnier/a03-aniso-e60-gd \
         --manifest dev/manifest_valdo_gitter_d.json --synthseg "dev/synthseg/{id}_synthseg.nii.gz"
 
-`{id}` is the case id; `{sid}` is the id without the cohort prefix (c2s-/csw-) used for the private grids.
+`{id}` is the case id; `{sid}` is the id without the cohort prefix (cmb.paths.ID_PREFIX) used for the private grids.
 Sums only -- safe to show for the private cohort.
 """
 import argparse
@@ -30,7 +30,7 @@ import nibabel.processing
 import numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT, ID_PREFIX
 sys.path.insert(0, f"{ROOT}/code")
 from gewebekarte import ORTE, ort_der_komponente      # noqa: E402
 
@@ -58,8 +58,8 @@ def load_synthseg(path: str, like: nib.Nifti1Image) -> np.ndarray:
 
 
 def synthseg_path(pattern: str, case_id: str) -> str:
-    """Fill {id} / {sid} in the pattern; {sid} is the id without the private cohort prefix (c2s-, csw-)."""
-    short = case_id.split("-", 1)[1] if case_id[:4] in ("c2s-", "csw-") else case_id
+    """Fill {id} / {sid} in the pattern; {sid} is the id without the private cohort prefix (cmb.paths.ID_PREFIX)."""
+    short = case_id.split("-", 1)[1] if any(case_id.startswith(p + "-") for p in ID_PREFIX.values()) else case_id
     path = pattern.format(id=case_id, sid=short)
     return path if os.path.isabs(path) else f"{ROOT}/{path}"
 

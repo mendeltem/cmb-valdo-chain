@@ -4,11 +4,11 @@ folds, as the fair baseline against our chain -- same cases, same 5 folds, same 
 Everything goes through the original package (``microbleednet`` CLI / ``data_preparation.preprocess_subject``): its own
 preprocessing (inversion, FRST; ``-f True`` = the masked raw image is used as is), its own two-stage fine-tuning (CDet + CDisc,
 all layers unfrozen -- the variant that won the earlier arena, 0.458 vs 0.420 on SWI) and its own evaluation.
-Layout (mirrors mb-arena/falten2): <root>/mbnet/<cohort>/preproc/{images,labels,frsts}, <root>/mbnet/<cohort>/falten/fold<k>/{train,test}/{images,labels,frsts},
-<root>/mbnet/<cohort>/ergebnisse/fold<k>/{modell,auswertung,lauf.json}. VALDO under valdo-t2s (public), catalina under mb-arena (private).
+Layout (mirrors <private>/falten2): <root>/mbnet/<cohort>/preproc/{images,labels,frsts}, <root>/mbnet/<cohort>/falten/fold<k>/{train,test}/{images,labels,frsts},
+<root>/mbnet/<cohort>/ergebnisse/fold<k>/{modell,auswertung,lauf.json}. VALDO under the repository (public), own cohorts under CMB_PRIVATE (private).
 
     python -m cmb.baselines.microbleednet_finetune prepare  --cohort valdo|t2star|swi [--processes 6]
-    python -m cmb.baselines.microbleednet_finetune finetune --cohort valdo --fold 0          (GPU, ~75 min; queue with grossauftrag --vram 20)
+    python -m cmb.baselines.microbleednet_finetune finetune --cohort valdo --fold 0          (GPU, ~75 min; queue with a GPU job queue)
     python -m cmb.baselines.microbleednet_finetune score    --cohort valdo                    (native lesion metric + our grid metric)
 """
 from __future__ import annotations
@@ -16,8 +16,8 @@ import argparse, glob, json, os, re, subprocess, sys, time
 from multiprocessing import Pool
 import nibabel as nib, numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"; MB = "/home/uchralt/data/work/mb-arena"; EXTERN = "/home/uchralt/data/extern/valdo2021/Task2"
-PYBIN = "/home/uchralt/miniconda3/envs/dl/bin"; WEIGHTS = "/home/uchralt/data/models/vortrainiert/microbleednet/microbleednet"
+from cmb.paths import ROOT, MB, VALDO as EXTERN, PYBIN, CASES
+WEIGHTS = os.environ.get("CMB_MICROBLEEDNET_WEIGHTS", os.path.join(ROOT, "models", "microbleednet", "microbleednet"))   # pretrained MicrobleedNet weights
 
 
 def root_of(cohort):
@@ -32,7 +32,7 @@ def cases_of(cohort):
                      grid_id=i, grid_dir=e["dir"]) for i, e in man.items()]
     man = {e["id"].split("-", 1)[1]: e for e in json.load(open(f"{MB}/gitter/manifest_{cohort}.json"))}
     out = []
-    for c in json.load(open(f"{MB}/faelle.json"))[cohort]["faelle"]:
+    for c in json.load(open(CASES))[cohort]["faelle"]:
         e = man[c["id"]]
         out.append(dict(id=c["id"], fold=int(c["fold"]), image=c["bild"], mask=c["hirn"], label=c["maske"], grid_id=e["id"], grid_dir=e["dir"]))
     return out
@@ -57,7 +57,7 @@ def _prep(job):
     os.makedirs(lab_dir, exist_ok=True); labfile = f"{root}/bilder/{c['id']}_label.nii.gz"
     nib.save(nib.Nifti1Image((lab > 0).astype(np.uint8), ni.affine), labfile)
     image, label, frst = dp.preprocess_subject(dict(input_path=masked, label_path=labfile, basename=c["id"], image_directory=img_dir, label_directory=lab_dir, frst_directory=frst_dir))
-    ref = nib.load(masked); aff, hdr = ref.affine, ref.header          # the package returns arrays; save them like mb-arena/preprocess_parallel.py
+    ref = nib.load(masked); aff, hdr = ref.affine, ref.header          # the package returns arrays; save them like <private>/preprocess_parallel.py
     os.makedirs(img_dir, exist_ok=True); os.makedirs(frst_dir, exist_ok=True)
     nib.save(nib.Nifti1Image(np.asarray(image, dtype=np.float32), aff, hdr), f"{img_dir}/{c['id']}_preproc.nii.gz")
     nib.save(nib.Nifti1Image(np.asarray(label, dtype=np.uint8), aff, hdr), f"{lab_dir}/{c['id']}_label.nii.gz")

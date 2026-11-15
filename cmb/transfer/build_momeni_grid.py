@@ -1,12 +1,12 @@
 """Momeni/CSIRO SWI cohort (doi 10.25919/aegy-ny12; licence: non-commercial, attribution, NO redistribution) onto the
-training grid, as the first INDEPENDENT public test of the SWI model (WORKLOG.md 5ae, arm 3; 2026-09-28).
+training grid, as the first INDEPENDENT public test of the SWI model (ARBEIT.md 5ae, arm 3; 2026-09-28).
 
-Source: ~/data/extern/momeni-csiro-cmb/PublicDataShare_2020/rCMB_DefiniteSubject/*.nii.gz -- 57 SWI, skull-stripped,
+Source: <momeni>/PublicDataShare_2020/rCMB_DefiniteSubject/*.nii.gz -- 57 SWI, skull-stripped,
 bias-corrected, histogram-matched by the authors, 0.94 x 0.94 x 1.75 mm, LPS; expert CMB LOCATIONS (no masks) in
 rCMBInformationInfo.xlsx, parsed to rCMB_locations.json as 1-based (x, y, z) voxel indices (checked 2026-09-28: at these
 voxels the image is 5.5 SD darker than the 13-voxel neighbourhood; every other axis order / index base is ~0).
 
-Treatment identical to VALDO/catalina: brain = image > 0, inverted scale 1 - I / max inside the brain, then the VALDO
+Treatment identical to VALDO/inhouse: brain = image > 0, inverted scale 1 - I / max inside the brain, then the VALDO
 grid builder (code/gitter_c_bauen.py: 0.5 x 0.5 x 1.0 mm, brain crop, FRST) via its environment switches. The label
 is a SPHERE of radius 1.5 mm around every location -- a stand-in for the missing masks, good enough for the
 centre-of-mass metric (cmb.analysis.subject_level_f1) and, with the touch rule, an approximation for the project metric.
@@ -21,10 +21,10 @@ import argparse, json, os, sys
 import nibabel as nib, numpy as np
 from scipy import ndimage
 
-EXTERN = "/home/uchralt/data/extern/momeni-csiro-cmb"
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import MOMENI as EXTERN
+from cmb.paths import ROOT
 SRC = f"{EXTERN}/PublicDataShare_2020/rCMB_DefiniteSubject"
-PY = "/home/uchralt/miniconda3/envs/dl/bin/python"
+from cmb.paths import PY
 
 
 def prepare(entry, source_dir):
@@ -55,7 +55,7 @@ def main():
     cases = [prepare(e, source_dir) for e in entries]
     os.makedirs(grid, exist_ok=True)
     sys.path.insert(0, f"{ROOT}/code")
-    import gitter_c_bauen as builder                          # same functions as VALDO / catalina (build_private_grids)
+    import gitter_c_bauen as builder                          # same functions as VALDO / inhouse (build_private_grids)
     builder.QUELLE, builder.ZIEL = source_dir, grid
     from multiprocessing import Pool
     jobs = [(case, k % 5, True) for k, (case, _) in enumerate(cases)]

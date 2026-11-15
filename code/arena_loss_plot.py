@@ -16,7 +16,7 @@ import json
 import os
 import statistics as st
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+ROOT = os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
 GREY = "#8a8f98"
 

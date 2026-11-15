@@ -1,5 +1,5 @@
 """SynthSeg (--robust, as for the private SWI cohort) for the Momeni/CSIRO cases, resampled onto the training grid, so the
-CSF rule and the tissue-aware tools can be applied there too (WORKLOG.md 5ae, arm 3; 2026-09-28).
+CSF rule and the tissue-aware tools can be applied there too (ARBEIT.md 5ae, arm 3; 2026-09-28).
 
 Input: the authors' skull-stripped, bias-corrected SWI (native, NOT the inverted grid image). Output:
 <extern>/synthseg/native/<id>_synthseg.nii.gz (SynthSeg output) and <extern>/synthseg/<id>_synthseg.nii.gz (nearest-neighbour
@@ -12,14 +12,15 @@ import argparse, json, os, subprocess, time
 import nibabel as nib, numpy as np
 from nibabel.processing import resample_from_to
 
-EXTERN = "/home/uchralt/data/extern/momeni-csiro-cmb"
-FS = "/home/uchralt/freesurfer/8.2.0/bin/mri_synthseg"
+from cmb.paths import MOMENI as EXTERN
+from cmb.paths import FREESURFER_HOME as _FSH
+FS = _FSH + "/bin/mri_synthseg"
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--threads", type=int, default=6); ap.add_argument("--cases", nargs="*", default=None); a = ap.parse_args()
-    env = dict(os.environ, FREESURFER_HOME="/home/uchralt/freesurfer/8.2.0")
+    env = dict(os.environ, FREESURFER_HOME=__import__("cmb.paths").paths.FREESURFER_HOME)
     entries = json.load(open(f"{EXTERN}/gitter/manifest_momeni.json"))
     locs = {("mom-" + e["file"].split("_")[0] + "-" + e["file"].split("_")[1]): e["file"] for e in json.load(open(f"{EXTERN}/rCMB_locations.json"))}
     os.makedirs(f"{EXTERN}/synthseg/native", exist_ok=True)

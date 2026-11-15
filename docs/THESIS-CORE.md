@@ -63,7 +63,7 @@ additional channel, inverted scale 1 - I/max. Re-implementation with Attention U
 Result of the chain on VALDO: **0.245 -> 0.647** (two-seed ensemble with CSF rule; mean over single seeds 0.605 ± 0.034).
 
 ## 3 Transfer to the in-house clinical cohort (the actual purpose)
-| Strategy | catalina-T2* (75 cases, 828 CMB) | catalina-SWI (61, 652) |
+| Strategy | inhouse-T2* (75 cases, 828 CMB) | inhouse-SWI (61, 652) |
 |---|---|---|
 | VALDO model without adaptation | 0.622 | 0.305 |
 | mixed / pretrained + fine-tuned | -0.02 to -0.045 confirmed | -0.045 confirmed |
@@ -87,7 +87,7 @@ more false positives. The bottleneck is separating lesion / vessel with a single
 fail on the anisotropic grid, because blooming turns a lesion into a short cylinder.
 
 ## 6 Proposed outline (short)
-1 Introduction (CMB, MicrobleedNet as starting point, goal: in-house clinical cohort) · 2 Data (VALDO 3 cohorts, catalina T2*/SWI,
+1 Introduction (CMB, MicrobleedNet as starting point, goal: in-house clinical cohort) · 2 Data (VALDO 3 cohorts, inhouse T2*/SWI,
 Momeni) and metric · 3 Re-implementation and errors of the original · 4 The seven changes (Table 2, one paragraph each with a figure
 from the slice viewer) · 5 Transfer (Table 3) · 6 Check outside the CV (Table 4) · 7 Limits and negative findings
 (one paragraph + appendix table) · 8 Conclusion: publishable chain, limit under heavy load.

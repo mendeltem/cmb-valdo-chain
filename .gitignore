@@ -9,3 +9,17 @@ ergebnisse/
 mbnet/
 logs/
 *.vor-*
+private/
+models/
+env.sh
+.venv/
+*.egg-info/
+.pytest_cache/
+dev/gitter_*/
+dev/gitter_d
+dev/synthseg
+dev/preproc*/
+dev/manifest_splits/
+.merged_labels/
+runs/
+!examples/phantoms/raw/*.nii.gz

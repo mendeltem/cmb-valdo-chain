@@ -1,7 +1,7 @@
 """Robustness probe: which augmentation targets a real weakness of a TRAINED network -- measured at inference, without training.
 
 Why (2026-09-22): the thick-slice augmentation was built on plausibility, cost 1.7 GPU hours and made the network worse
-(WORKLOG.md 5p). Before the next training augmentation we want to know, for a few minutes of inference instead of hours of
+(ARBEIT.md 5p). Before the next training augmentation we want to know, for a few minutes of inference instead of hours of
 training, how the finished network reacts when its TEST images are perturbed the way the augmentation would perturb the
 training images:
 
@@ -44,7 +44,7 @@ import numpy as np
 import torch
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 sys.path.insert(0, ROOT)
 from cmb.analysis.fp_location import load_synthseg, synthseg_path                 # noqa: E402

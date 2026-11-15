@@ -19,9 +19,9 @@ Bias correction (FSL FAST -B) is NOT part of that chain and runs before it."""
 import os, sys, json, time, argparse, subprocess, glob
 import numpy as np, nibabel as nib
 
-VALDO = "/home/uchralt/data/extern/valdo2021/Task2"
-MBNET = "/home/uchralt/software/microbleed-detection"
-FSLDIR = "/home/uchralt/fsl"
+VALDO = os.environ.get("CMB_VALDO", os.path.join(os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "valdo2021", "Task2"))
+MBNET = os.environ.get("CMB_MICROBLEEDNET_SRC", "microbleed-detection")   # source checkout of MicrobleedNet (958f1cb)
+FSLDIR = os.environ.get("FSLDIR", "/usr/local/fsl")
 
 def bias_correct(t2s_path, workdir):
     """FSL FAST -B on the (already skull-stripped) T2*. Returns path to the restored image."""

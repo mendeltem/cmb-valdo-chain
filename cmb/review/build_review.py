@@ -66,7 +66,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, ROOT)
 from cmb.analysis.fp_location import load_synthseg                                               # noqa: E402
 from cmb.analysis.missed_lesions import majority_label                                           # noqa: E402

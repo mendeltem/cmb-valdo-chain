@@ -5,7 +5,7 @@ generator changes, so that an edit to ``build_slice_viewer.PAGE`` shows up in th
 
 - Serves OUT_DIR on http://127.0.0.1:PORT/ -- loopback only, never a LAN address: the folders hold patient images.
   OUT_DIR is either one viewer folder (quality_control.html, data.json, img/) or a parent folder whose direct
-  subfolders are viewers (e.g. charite/swi, charite/t2star); then every viewer is served and rebuilt.
+  subfolders are viewers (e.g. inhouse/swi, inhouse/t2star); then every viewer is served and rebuilt.
 - The page polls its own Last-Modified header (see PAGE in build_slice_viewer.py) and reloads itself; case and
   slice survive the reload (URL hash + sessionStorage).
 - With --watch (default) the server checks the mtime of build_slice_viewer.py every second and, when it changed,
@@ -27,6 +27,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):  # keep the terminal quiet except for errors
         if args and str(args[1]) not in ("200", "304"):
             super().log_message(fmt, *args)
+
+    def do_POST(self):  # the slice viewer's "save" button posts its review checklist here
+        import re as _re
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0 or n > 1024 * 1024:
+            self.send_error(400, "empty or oversized body"); return
+        try:
+            payload = json.loads(self.rfile.read(n).decode())
+            page = self.path.split("?", 1)[0]
+            target = next((v for v in self.server.outs if os.path.relpath(os.path.join(v, "quality_control.html"), self.directory).replace(os.sep, "/") == page.lstrip("/")), None)
+            if target is None or not _re.fullmatch(r"[\w./ -]{1,120}", page or "?") or not (isinstance(payload, dict) and isinstance(payload.get("reviewed"), list)):
+                raise ValueError("no matching viewer or unexpected payload")
+            with open(os.path.join(target, "review_status.json"), "w") as f:
+                json.dump(payload, f, indent=1)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+        except Exception as e:
+            self.send_error(400, str(e))
 
 
 def rebuild(out: str) -> None:
@@ -77,6 +96,7 @@ def main() -> None:
         threading.Thread(target=watch, args=(out,), daemon=True).start()
     urls = [f"http://127.0.0.1:{a.port}/" + ("" if v == out else os.path.basename(v) + "/") + "quality_control.html" for v in found]
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), lambda *x: Handler(*x, directory=out))
+    srv.outs = found  # used by do_POST to map a page back to its viewer folder
     print(f"[live] serving {out}   (watching {os.path.basename(GENERATOR)}: {'yes' if not a.no_watch else 'no'}; Ctrl-C stops)", flush=True)
     for u in urls:
         print(f"[live] {u}", flush=True)

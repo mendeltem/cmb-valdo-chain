@@ -23,10 +23,9 @@ import time
 
 import numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 RUNS = f"{ROOT}/ergebnisse/turnier"
-QUEUE_TOOL = "/home/uchralt/local_agentic_system/system/werkzeuge/grossauftrag"
-PYTHON = "/home/uchralt/miniconda3/envs/dl/bin/python"
+from cmb.paths import QUEUE as QUEUE_TOOL, PY as PYTHON   # QUEUE_TOOL: GPU job queue command (CMB_QUEUE)
 LADDER = [0.6, 0.5, 0.333, 0.25, 0.2, 0.167, 0.143]          # towards more negatives
 NAMES = {0.6: "1.5:1 (recipe)", 0.5: "1:1", 0.333: "1:2", 0.25: "1:3", 0.2: "1:4", 0.167: "1:5", 0.143: "1:6", 0.667: "2:1"}
 
@@ -63,7 +62,7 @@ def queue(*command: str) -> None:
 def main() -> None:
     done = {s: rows(s) for s in LADDER + [0.667]}
     done = {s: r for s, r in done.items() if r}
-    lines = [f"**Ratio chain {time.strftime('%d.%m. %H:%M')} (cmb/analysis/ratio_chain.py):**"]
+    lines = [f"**Verhaeltnis-Kette {time.strftime('%d.%m. %H:%M')} (cmb/analysis/ratio_chain.py):**"]
     for s in sorted(done, reverse=True):
         extra = ""
         if s != 0.6 and 0.6 in done:
@@ -80,13 +79,13 @@ def main() -> None:
         elif len(walked) == 3 and best_before == 0.6 and f1(list(done[0.5].values())) < f1(list(done[0.6].values())) and 0.667 not in done:
             next_share = 0.667                                   # neither 1:1 nor 1:2 helped: look the other way once
     if next_share:
-        lines.append(f"  -> next step queued: {NAMES[next_share]} (share {next_share})")
+        lines.append(f"  -> naechster Schritt eingereiht: {NAMES[next_share]} (Anteil {next_share})")
         queue(PYTHON, f"{ROOT}/code/turnier.py", "--netz", "a03-aniso", "--epochen", "60", "--gitter", "dev/gitter_d",
               "--anteil-laesion", str(next_share))
         queue(PYTHON, "-m", "cmb.analysis.ratio_chain")
     else:
         best = max(done, key=lambda s: f1(list(done[s].values())))
-        lines.append(f"  -> chain finished. Best ratio: {NAMES[best]} (F1 {f1(list(done[best].values())):.3f}).")
+        lines.append(f"  -> Kette beendet. Bestes Verhaeltnis: {NAMES[best]} (F1 {f1(list(done[best].values())):.3f}).")
     text = "\n".join(lines)
     print(text)
     open(f"{ROOT}/protokoll.md", "a", encoding="utf-8").write("\n" + text + "\n")

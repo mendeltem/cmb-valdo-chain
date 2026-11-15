@@ -12,7 +12,7 @@ Differences that cannot be avoided and must be kept in mind when reading results
   * images are reoriented to RAS+ first; slice thickness is 5 mm (T2*) / 2 mm (SWI), so the
     through-plane direction is interpolated even more strongly than in VALDO's 4 mm cohort.
 
-Private data: everything is written below ``mb-arena/`` and never leaves the machine.
+Private data: everything is written below ``<private>/`` and never leaves the machine.
 
     python -m cmb.transfer.build_private_grids --modality t2star
     python -m cmb.transfer.build_private_grids --modality swi
@@ -29,13 +29,13 @@ from multiprocessing import Pool
 import nibabel as nib
 import numpy as np
 
-PRIVATE = "/home/uchralt/data/work/mb-arena"
-sys.path.insert(0, "/home/uchralt/data/work/valdo-t2s/code")
+from cmb.paths import PRIVATE, INHOUSE_LABEL, CASES, ID_PREFIX
+sys.path.insert(0, __import__("cmb.paths").paths.ROOT + "/code")
 
 
 def prepare_source(entry: dict, modality: str, source_dir: str) -> str:
     """Write ``<id>_image.nii.gz`` (inverted, masked) and ``<id>_label.nii.gz`` on the native grid."""
-    case = f"{'c2s' if modality == 't2star' else 'csw'}-{entry['id']}"          # unique across all cohorts
+    case = f"{ID_PREFIX[modality]}-{entry['id']}"          # unique across all cohorts
     folder = f"{source_dir}/{case}"
     if os.path.exists(f"{folder}/{case}_label.nii.gz"):
         return case
@@ -61,7 +61,7 @@ def main() -> None:
     parser.add_argument("--modality", choices=["t2star", "swi"], required=True)
     parser.add_argument("--processes", type=int, default=4)
     args = parser.parse_args()
-    entries = json.load(open(f"{PRIVATE}/faelle.json"))[args.modality]["faelle"]
+    entries = json.load(open(CASES))[args.modality]["faelle"]
     source_dir, target_dir = f"{PRIVATE}/gitter/quelle_{args.modality}", f"{PRIVATE}/gitter/{args.modality}"
     os.makedirs(target_dir, exist_ok=True)
 
@@ -74,7 +74,7 @@ def main() -> None:
     failed = [i["id"] for i in infos if "fehler" in i]
     changed = [i["id"] for i in infos if "fehler" not in i and not i["komponenten_gleich"]]
     outside = [i["id"] for i in infos if "fehler" not in i and not i["alle_laesionen_im_crop"]]
-    manifest = [dict(id=c, fold=f, dir=f"{target_dir}/{c}", cohort=f"catalina-{args.modality}",
+    manifest = [dict(id=c, fold=f, dir=f"{target_dir}/{c}", cohort=f"{INHOUSE_LABEL}-{args.modality}",
                      n_cmb=next(i.get("n_cmb") for i in infos if i["id"] == c)) for c, f, _ in jobs if c not in failed]
     json.dump(manifest, open(f"{PRIVATE}/gitter/manifest_{args.modality}.json", "w"), indent=1)
     print(f"{args.modality}: {len(manifest)} of {len(jobs)} cases on the grid | failed {len(failed)} | "

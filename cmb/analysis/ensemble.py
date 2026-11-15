@@ -21,7 +21,7 @@ import os
 import nibabel as nib
 import numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 
 
 def main() -> None:

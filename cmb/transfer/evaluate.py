@@ -25,7 +25,7 @@ import nibabel as nib
 import numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 from metric import hits, summarize            # noqa: E402
 

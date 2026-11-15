@@ -41,9 +41,9 @@ import nibabel as nib
 import numpy as np
 from nibabel.processing import resample_from_to, resample_to_output
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT, PRIVATE, INHOUSE_LABEL, CASES
 SHIVA_SHAPE = (160, 214, 176)
-MODEL_GLOB = "/home/uchralt/software/SHIVA_CMB/modelle/SWI-CMB/*.tf_inference"
+MODEL_GLOB = os.environ.get("CMB_SHIVA_MODELS", os.path.join(ROOT, "models", "SHIVA_CMB", "SWI-CMB")) + "/*.tf_inference"
 THRESHOLD = 0.5
 
 
@@ -65,11 +65,11 @@ def valdo_cases() -> List[Dict[str, str]]:
     return cases
 
 
-def catalina_cases(modality: str) -> List[Dict[str, str]]:
+def inhouse_cases(modality: str) -> List[Dict[str, str]]:
     """Private cohort (never public, sums only). SHIVA-CMB has never seen these scans, so this --
     unlike VALDO, which is part of SHIVA's training data -- is a fair test of the off-the-shelf model.
     Evaluation happens on the native image grid, where the manual masks live."""
-    listing = json.load(open("/home/uchralt/data/work/mb-arena/faelle.json"))[modality]["faelle"]
+    listing = json.load(open(CASES))[modality]["faelle"]
     cases = []
     for entry in listing:
         corrected = glob.glob(os.path.dirname(entry["bild"]).replace(
@@ -109,7 +109,7 @@ def conform(image: nib.Nifti1Image, brain: nib.Nifti1Image) -> Tuple[np.ndarray,
 # --------------------------------------------------------------------------- main
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--cohort", choices=["valdo", "catalina-t2star", "catalina-swi"], default="valdo")
+    parser.add_argument("--cohort", choices=["valdo", f"{INHOUSE_LABEL}-t2star", f"{INHOUSE_LABEL}-swi"], default="valdo")
     parser.add_argument("--out", required=True)
     parser.add_argument("--limit", type=int, default=0, help="only the first N cases (smoke test)")
     args = parser.parse_args()
@@ -125,7 +125,7 @@ def main() -> None:
     assert len(model_paths) == 3, f"expected 3 fold models, found {model_paths}"
     models = [tf.saved_model.load(p) for p in model_paths]
 
-    cases = valdo_cases() if args.cohort == "valdo" else catalina_cases(args.cohort.split("-")[1])
+    cases = valdo_cases() if args.cohort == "valdo" else inhouse_cases(args.cohort.split("-")[1])
     if args.limit:
         cases = cases[:args.limit]
     rows, rows_valdo = [], []
@@ -145,6 +145,8 @@ def main() -> None:
             reference, prediction = reference[..., 0], prediction.reshape(reference.shape[:3])
         nib.save(nib.Nifti1Image(prediction.astype(np.uint8), label_img.affine),
                  f"{out_dir}/{case['id']}_pred.nii.gz")
+        nib.save(nib.Nifti1Image(np.asarray(on_eval_grid.dataobj, dtype=np.float32), label_img.affine),
+                 f"{out_dir}/{case['id']}_prob.nii.gz")          # wk1: for nested threshold selection
 
         rows.append(hits(reference, prediction))
         rows_valdo.append(case_valdo(reference, prediction.astype(np.uint8), label_img.affine))

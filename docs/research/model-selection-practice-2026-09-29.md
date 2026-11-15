@@ -10,7 +10,7 @@
 | 6 | Seeds produce outliers, variance does not decrease with longer training | Picard 2021 | hence the rule: a single seed decides nothing below the seed maximum of the baseline (0.646); the tournament-2 threshold +0.04 lies above that |
 | 7 | HPO at < 100 cases: no evidence of benefit; nnU-Net deliberately avoids it | Isensee 2021; Auto-nnU-Net 2025 | Tournament 2 serves as proof of the search, not hope |
 | 8 | VALDO overview: Dice + volumetry as the challenge metric, large spread, "gap at case level" | arXiv 2208.07167 | our lesion F1 + paired bootstrap goes beyond that |
-| 9 | MicrobleedNet: internal Dice 0.73, external 0.46 -- the domain shift is larger than any seed noise | PMC12091992 (2024/25) | measured: VALDO model on catalina-SWI 0.305, on Momeni 0.613; own training per cohort is the answer |
+| 9 | MicrobleedNet: internal Dice 0.73, external 0.46 -- the domain shift is larger than any seed noise | PMC12091992 (2024/25) | measured: VALDO model on inhouse-SWI 0.305, on Momeni 0.613; own training per cohort is the answer |
 | 10 | MixMicrobleedNet: fold=all, self-test on training data | arXiv 2108.01389 | us: 5-fold CV, test set once |
 | 11 | SHIVA-CMB: 450 scans, 7 acquisitions, held-out test set + external cohort (F1 0.74, S 0.67, P 0.82) | Boutinaud 2024, Sci Rep | we have the external test (Momeni) -- but only 57 cases of one acquisition; training breadth (7 acquisitions) is what we lack |
 | 12 | CenSynCMB: leakage-free per fold, spread across folds + p-values, external cohort as an additional control | He 2026, arXiv 2607.05325 | congruent with our design; we report fold spread (F1 per fold in the ranking) |

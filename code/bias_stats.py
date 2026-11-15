@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""we1: bias correction evidence -- mean/std in the brain before and after fast -B.
+"""we1: Biaskorrektur-Beleg -- Mittel/Std im Hirn vor und nach fast -B.
 
-3 example cases per cohort (as many as are already done): raw image vs
-fast_restore, brain mask = image>0 of the respective image. Output to
+3 Beispielfaelle je Kohorte (so viele, wie schon fertig sind): Rohbild vs
+fast_restore, Hirnmaske = Bild>0 des jeweiligen Bildes. Ausgabe nach
 dev/bias_stats.json.
 """
 import os, json
 import numpy as np, nibabel as nib
 
-VALDO = "/home/uchralt/data/extern/valdo2021/Task2"
-PREPROC = "/home/uchralt/data/work/valdo-t2s/dev/preproc"
-PROBE = "/home/uchralt/data/work/valdo-t2s/dev/preproc-probe"
+_ROOT = os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+VALDO = os.environ.get("CMB_VALDO", os.path.join(_ROOT, "data", "valdo2021", "Task2"))
+PREPROC = f"{_ROOT}/dev/preproc"
+PROBE = f"{_ROOT}/dev/preproc-probe"
 
 def stats_of(path):
     img = nib.load(path).get_fdata()
@@ -34,19 +35,19 @@ def main():
         out[sid] = {"kohorte": sid[4],
                     "vor": stats_of(raw),
                     "nach": stats_of(restore)}
-    # max. 3 per cohort
+    # je Kohorte max. 3
     sel = {}
     for sid, v in out.items():
         sel.setdefault(v["kohorte"], [])
         if len(sel[v["kohorte"]]) < 3:
             sel[v["kohorte"]].append(sid)
     chosen = {s: out[s] for ss in sel.values() for s in ss}
-    json.dump(chosen, open(f"/home/uchralt/data/work/valdo-t2s/dev/bias_stats.json", "w"),
+    json.dump(chosen, open(f"{_ROOT}/dev/bias_stats.json", "w"),
               indent=1, ensure_ascii=False)
     for sid, v in sorted(chosen.items()):
-        print(f"{sid} ko{v['kohorte']}  before: {v['vor']['mittel']}+/-{v['vor']['std']} "
-              f"({v['vor']['n_voxel']} vox)  after: {v['nach']['mittel']}+/-{v['nach']['std']}")
-    print("done:", len(chosen), "cases (more will come once more cases have gone through fast)")
+        print(f"{sid} ko{v['kohorte']}  vor: {v['vor']['mittel']}+/-{v['vor']['std']} "
+              f"({v['vor']['n_voxel']} vox)  nach: {v['nach']['mittel']}+/-{v['nach']['std']}")
+    print("fertig:", len(chosen), "Faelle (mehr kommen, wenn mehr Faelle durch fast sind)")
 
 if __name__ == "__main__":
     main()

@@ -20,7 +20,7 @@ The old scripts stay untouched while the GPU queue is calling them.
 | `train.py` (one fold), `cli/` (tournament, ranking, tissue map, vessel inpainting) | `cv5.train_falte`, `turnier*.py`, `uebermalung2.py` | planned |
 | `preprocessing/vessel_inpainting.py` | `uebermalung2.py` | planned |
 
-Tests (run from `valdo-t2s/`): `python -m cmb.tests.test_models_match_legacy`, `python -m cmb.tests.test_metrics_match_legacy`.
+Tests (run from the repository root): `python -m cmb.tests.test_models_match_legacy`, `python -m cmb.tests.test_metrics_match_legacy`.
 
 **Why the rest is not ported yet (2026-09-23):** `turnier.py` and `cv5.py` are the two largest modules (843 and 478
 lines) and are being called by the GPU queue right now; porting them means touching running scripts. They come once
