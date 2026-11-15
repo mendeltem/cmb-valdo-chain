@@ -4,6 +4,7 @@ Lines ``NAME=value`` (``#`` comments, optional quotes). Relative paths resolve a
 directory, so the tutorials run from anywhere. A variable set in the shell environment wins over ``.env``.
 Names are those of cmb_3d_unet_experiments: CMB_INPUT_DIR, CMB_LABEL_DIR, CMB_MODEL_DIR, CMB_OUTPUT_DIR, CMB_SCAN (+ CMB_*).
 """
+
 from __future__ import annotations
 
 import os
@@ -13,7 +14,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH_KEYS_SUFFIX = ("_DIR", "_SCAN", "_FILE")
 
 
-def env(path: str = None) -> SimpleNamespace:
+def env(path: str | None = None) -> SimpleNamespace:
     path = path or os.path.join(REPO, ".env")
     values = {}
     if os.path.exists(path):

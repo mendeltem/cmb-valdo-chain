@@ -7,6 +7,7 @@ follow MicrobleedNet: -i input, -l labels, -m model, -o output, -ep epochs, -ilr
     cmb selftest                                            no data, CPU, < 2 min
     cmb paths                                               where the code looks for data (environment variables)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,9 @@ def _common_train(p, defaults: str) -> None:
     p.add_argument("-ilr", type=float, default=None, help="initial learning rate (see the table in the README)")
     p.add_argument("-bs", type=int, default=None, help="batch size (default: recipe, 4)")
     p.add_argument("--frst", default="True", help="FRST as the second input channel (True/False; paper: True)")
-    p.add_argument("--patches", type=int, default=None, help="patches per epoch (recipe 800; small values for smoke tests only)")
+    p.add_argument(
+        "--patches", type=int, default=None, help="patches per epoch (recipe 800; small values for smoke tests only)"
+    )
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
 
 
@@ -27,14 +30,26 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     from cmb import predict_cli as predict
-    p = sub.add_parser("predict", help="microbleeds on one scan or a folder of scans",
-                       description=predict.__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    p = sub.add_parser(
+        "predict",
+        help="microbleeds on one scan or a folder of scans",
+        description=predict.__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     predict.add_arguments(p)
 
-    p = sub.add_parser("preprocess", help="raw scans -> the paper's model grid (brain mask, FAST, inversion, grid, FRST)")
+    p = sub.add_parser(
+        "preprocess", help="raw scans -> the paper's model grid (brain mask, FAST, inversion, grid, FRST)"
+    )
     p.add_argument("-i", required=True, help="folder with the raw scans")
-    p.add_argument("-ir", required=True, help="scan name suffix at the END of the file name, e.g. _T2starw (<id>_T2starw.nii.gz); "
-                   "searched recursively (flat folders and BIDS trees); names ending in -lr / -br are never scans")
+    p.add_argument(
+        "-ir",
+        required=True,
+        help="scan name suffix at the END of the file name, e.g. _T2starw (<id>_T2starw.nii.gz); "
+        "searched recursively (flat folders and BIDS trees); names ending in -lr / -br, _brainmask, _mask or _roi "
+        "are never scans",
+    )
     p.add_argument("-f", default="False", help="True: scans are already skull-stripped and bias-corrected (no FSL)")
     p.add_argument("-b", default=None, help="folder with brain masks (default: computed, see cmb predict --help)")
     p.add_argument("-br", default="_brainmask", help="brain mask suffix")
@@ -42,10 +57,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-lr", default="_cmb", help="CMB mask suffix")
     p.add_argument("-o", required=True, help="output grid folder (one <id>/ per case + manifest.json)")
     p.add_argument("-fold", type=int, default=5, help="number of cross-validation folds written into manifest.json")
-    p.add_argument("--cohort", default="data", help="cohort name in the manifest (the joint/separate classifier groups by it)")
-    p.add_argument("--profile", choices=["own", "valdo"], default="own",
-                   help="own = the paper's pipeline for its own cohorts (cmb.transfer.build_private_grids: RAS+ reorientation, "
-                        "brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d (no reorientation)")
+    p.add_argument(
+        "--cohort", default="data", help="cohort name in the manifest (the joint/separate classifier groups by it)"
+    )
+    p.add_argument(
+        "--profile",
+        choices=["own", "valdo"],
+        default="own",
+        help="own = the paper's pipeline for its own cohorts (cmb.transfer.build_private_grids: RAS+ reorientation, "
+        "brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d (no reorientation)",
+    )
 
     p = sub.add_parser("train", help="train the stage-1 U-Net on all cases (cmb.training.full_data)")
     p.add_argument("-i", required=True, help="grid folder from cmb preprocess")
@@ -60,10 +81,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-l", default=None, help="labels (default: -i)")
     p.add_argument("-m", required=True, help="start model: 'pre' = the public VALDO T2* model, or a model folder")
     p.add_argument("-o", required=True, help="new model folder")
-    p.add_argument("--ft_layers", choices=["all", "norm_out"], default="all",
-                   help="all = full fine-tuning (FT); norm_out = only InstanceNorm affine + output head (FTn)")
-    p.add_argument("--calibrate_only", default="False",
-                   help="True: no training; threshold and minimum size re-chosen on the given scans (Phase 2 CAL arm)")
+    p.add_argument(
+        "--ft_layers",
+        choices=["all", "norm_out"],
+        default="all",
+        help="all = full fine-tuning (FT); norm_out = only InstanceNorm affine + output head (FTn)",
+    )
+    p.add_argument(
+        "--calibrate_only",
+        default="False",
+        help="True: no training; threshold and minimum size re-chosen on the given scans (Phase 2 CAL arm)",
+    )
     _common_train(p, "paper: 30")
 
     p = sub.add_parser("evaluate", help="stage-1 maps and masks for a grid folder (+ lesion F1 if labels exist)")
@@ -79,9 +107,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-o", required=True, help="output folder")
     p.add_argument("-fold", type=int, default=5, help="5 (the paper's CV code needs 5 folds: test k, inner k+1 mod 5)")
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--stage2", choices=["joint", "separate", "none"], default="none",
-                   help="stage-2 classifier on the out-of-fold candidates: joint = one for all cohorts (the paper's), "
-                        "separate = one per cohort (also reports joint)")
+    p.add_argument(
+        "--stage2",
+        choices=["joint", "separate", "none"],
+        default="none",
+        help="stage-2 classifier on the out-of-fold candidates: joint = one for all cohorts (the paper's), "
+        "separate = one per cohort (also reports joint)",
+    )
     _common_train(p, "paper: 60")
 
     p = sub.add_parser("get-model", help="download a pretrained model (SHA-256 checked)")
@@ -99,8 +131,10 @@ def main(argv=None) -> None:
     ap = build_parser()
     a = ap.parse_args(argv)
     from cmb import commands as C
+
     if a.cmd == "predict":
         from cmb import predict_cli as predict
+
         predict.run(a)
     elif a.cmd == "preprocess":
         C.preprocess(a)
@@ -115,6 +149,7 @@ def main(argv=None) -> None:
         C.cross_validate(a)
     elif a.cmd == "get-model":
         from cmb import pretrained as PR
+
         if a.list:
             for n in PR.REGISTRY:
                 print(PR.describe(n))
@@ -123,9 +158,11 @@ def main(argv=None) -> None:
         print(PR.describe(a.name))
     elif a.cmd == "selftest":
         from cmb import selftest
+
         selftest.main()
     elif a.cmd == "paths":
         from cmb import paths
+
         print(paths.describe())
 
 

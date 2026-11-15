@@ -37,3 +37,19 @@ Found by testing the tag on own data. None of these changes touches the paper co
    download from release v1.1.0 (the paper tag keeps the stage-1 files).
 5. `scripts/prep_bids/hirn_und_bias.py`: HD-BET and FSL are found through `HDBET` / `PATH` and `FSLDIR` (it had
    home-relative paths of the original machine); `tests/test_privacy.py` now also rejects home-relative paths.
+7. **Code-quality checks (main, after v1.1.0).** No output changes on valid input; the reference tests (own profile
+   against `prepare_source`, VALDO profile against the stored grid, stage-2 candidates against `cmb.stage2.candidates`)
+   still pass bit for bit.
+   * Run-stopping input checks (`cmb/checks.py`, test `tests/test_checks.py`): `cmb preprocess` and `cmb predict` stop
+     when a brain mask, label or FRST map is not on the scan's voxel grid (matrix, orientation code, corners within a
+     quarter voxel: the rule of `scripts/prep_bids/eingaben_bauen.py`), when a brain mask is empty or mostly on zero
+     scan voxels, or when a labelled CMB lies entirely outside the scan's data; the manifest commands stop on an empty
+     or repeated case id; `cmb evaluate` stops when a scan labelled in the manifest has no label file (before, it was
+     left out of the F1 silently) and checks that every labelled scan was scored. A grid folder without manifest.json
+     marks scans without a label file as unlabelled, as they were treated before.
+   * Names ending in `_roi` are never scans (with `_brainmask` and `_mask`), for every `-ir`.
+   * The Python API stops with a message when `preprocess` / `fine_tune` get no `o=` or `train` no `m=` (it passed the
+     text "None" as the folder name).
+   * Static analysis (ruff, pyright basic, import-linter contracts in `pyproject.toml`), property tests
+     (`tests/test_properties.py`, hypothesis), the freeze check of the research code (`tests/test_frozen.py`), and CI
+     (`.github/workflows/checks.yml`: checks + `pytest tests -m "not valdo"`; VALDO tests carry the marker `valdo`).

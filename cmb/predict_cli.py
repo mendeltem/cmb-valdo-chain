@@ -28,6 +28,7 @@ file (PAPER_VERSION.md). The result is the paper's stage-1 chain with the fixed 
 The public model saw T2*-GRE only (VALDO). Other sequences such as SWI need local fine-tuning first
 (``cmb.training`` / scripts/paper/phase2_finetune/run_block.py, see README) and then ``-m <your model folder>``.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,10 +41,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Optional
 
 import numpy as np
 
+from cmb import checks
+from cmb.nifti import components, load
 from cmb.paths import ROOT
 
 CSF_LABELS = (4, 5, 14, 15, 24, 43, 44)
@@ -74,11 +76,12 @@ def scans_in(path: str):
 
 
 # ----------------------------------------------------------------------------------------------- preprocessing steps
-def brain_mask(img: np.ndarray, ni, given: Optional[str], work: str, log) -> np.ndarray:
+def brain_mask(img: np.ndarray, ni, given: str | None, work: str, log) -> np.ndarray:
     import nibabel as nib
     from scipy import ndimage
+
     if given:
-        m = np.asarray(nib.load(given).dataobj) > 0
+        m = np.asarray(load(given).dataobj) > 0
         if m.shape != img.shape:
             raise SystemExit(f"brain mask {m.shape} does not match the scan {img.shape}")
         log("brain mask: given")
@@ -86,27 +89,31 @@ def brain_mask(img: np.ndarray, ni, given: Optional[str], work: str, log) -> np.
     zeros = float((img == 0).mean())
     if zeros >= 0.20:
         log(f"brain mask: image > 0 (scan looks skull-stripped, {zeros:.0%} zero voxels)")
-        return ndimage.binary_fill_holes(img > 0)
+        return np.asarray(ndimage.binary_fill_holes(img > 0), bool)
     if shutil.which("hd-bet"):
-        src = os.path.join(work, "hdbet_in.nii.gz"); out = os.path.join(work, "hdbet_out.nii.gz")
+        src = os.path.join(work, "hdbet_in.nii.gz")
+        out = os.path.join(work, "hdbet_out.nii.gz")
         nib.save(nib.Nifti1Image(img.astype(np.float32), ni.affine, ni.header), src)
         r = subprocess.run(["hd-bet", "-i", src, "-o", out], capture_output=True, text=True)
         masks = glob.glob(os.path.join(work, "hdbet_out*mask*.nii.gz"))
         if r.returncode == 0 and masks:
             log("brain mask: HD-BET")
-            return np.asarray(nib.load(masks[0]).dataobj) > 0
+            return np.asarray(load(masks[0]).dataobj) > 0
         warn(f"HD-BET failed (rc {r.returncode}); falling back to an intensity mask")
-    warn("no brain mask given, scan not skull-stripped and HD-BET not found: using a rough intensity mask "
-         "(Otsu + largest component). Pass --brain-mask for reliable results.")
+    warn(
+        "no brain mask given, scan not skull-stripped and HD-BET not found: using a rough intensity mask "
+        "(Otsu + largest component). Pass --brain-mask for reliable results."
+    )
     from skimage.filters import threshold_otsu
+
     m = img > threshold_otsu(img[np.isfinite(img)])
-    lab, n = ndimage.label(m)
+    lab, n = components(m)
     if n:
         m = lab == (np.argmax(np.bincount(lab.ravel())[1:]) + 1)
-    return ndimage.binary_fill_holes(ndimage.binary_closing(m, iterations=3))
+    return np.asarray(ndimage.binary_fill_holes(ndimage.binary_closing(m, iterations=3)), bool)
 
 
-def find_fast() -> Optional[str]:
+def find_fast() -> str | None:
     for c in (os.path.join(os.environ.get("FSLDIR", ""), "bin", "fast"), shutil.which("fast")):
         if c and os.path.isfile(c) and os.access(c, os.X_OK):
             return c
@@ -115,23 +122,30 @@ def find_fast() -> Optional[str]:
 
 def bias_correct(masked: np.ndarray, ni, mode: str, work: str, log) -> np.ndarray:
     import nibabel as nib
+
     if mode == "none":
         log("bias correction: skipped (--no-bias-correction)")
         return masked
     fast = find_fast() if mode in ("auto", "fsl") else None
     if fast:
-        src = os.path.join(work, "masked.nii.gz"); stem = os.path.join(work, "fast")
+        src = os.path.join(work, "masked.nii.gz")
+        stem = os.path.join(work, "fast")
         nib.save(nib.Nifti1Image(masked.astype(np.float32), ni.affine, ni.header), src)
         env = dict(os.environ, FSLOUTPUTTYPE="NIFTI_GZ")
-        r = subprocess.run([fast, "-t", "2", "-n", "3", "-B", "-b", "--nopve", "-o", stem, src],
-                           env=env, capture_output=True, text=True)      # the paper's call (code/preprocess.py)
+        r = subprocess.run(
+            [fast, "-t", "2", "-n", "3", "-B", "-b", "--nopve", "-o", stem, src],
+            env=env,
+            capture_output=True,
+            text=True,
+        )  # the paper's call (code/preprocess.py)
         if r.returncode == 0 and os.path.exists(stem + "_restore.nii.gz"):
             log("bias correction: FSL FAST -B (as in the paper)")
-            return np.asarray(nib.load(stem + "_restore.nii.gz").dataobj, dtype=np.float32)
+            return np.asarray(load(stem + "_restore.nii.gz").dataobj, dtype=np.float32)
         warn(f"FSL FAST failed (rc {r.returncode}): {r.stderr[-200:]}")
     if mode == "fsl":
         raise SystemExit("--bias fsl: FSL FAST not available")
     import SimpleITK as sitk
+
     warn("FSL FAST not found: bias correction with SimpleITK N4 instead (not the paper's step; results may differ)")
     im = sitk.GetImageFromArray(np.ascontiguousarray(masked.transpose(2, 1, 0)).astype(np.float32))
     mk = sitk.GetImageFromArray(np.ascontiguousarray((masked > 0).transpose(2, 1, 0)).astype(np.uint8))
@@ -142,7 +156,8 @@ def bias_correct(masked: np.ndarray, ni, mode: str, work: str, log) -> np.ndarra
 def invert(restore: np.ndarray) -> np.ndarray:
     """code/preproc_roh_bauen.py: 1 - restore / max(restore) inside the brain (restore > 0, holes filled), else 0."""
     from scipy import ndimage
-    brain = ndimage.binary_fill_holes(restore > 0)
+
+    brain = np.asarray(ndimage.binary_fill_holes(restore > 0), bool)
     return np.where(brain, 1 - restore / restore.max(), 0).astype(np.float32)
 
 
@@ -160,24 +175,31 @@ def source_volumes(restore: np.ndarray, brain: np.ndarray, label: np.ndarray, ni
       with holes filled, ``1 - I / max(I)``, saved with the scan header.
     Returns (inverted, label uint8, affine, header or None)."""
     import nibabel as nib
+
     if profile == "valdo":
         return invert(restore), (label > 0).astype(np.uint8), ni.affine, ni.header
     if profile != "own":
         raise SystemExit(f"unknown profile {profile!r} (own | valdo)")
     image_nii = nib.as_closest_canonical(nib.Nifti1Image(restore.astype(np.float32), ni.affine, ni.header))
-    canon = lambda a: np.asarray(nib.as_closest_canonical(nib.Nifti1Image(a.astype(np.uint8), ni.affine)).dataobj) > 0
+
+    def canon(a):
+        return np.asarray(nib.as_closest_canonical(nib.Nifti1Image(a.astype(np.uint8), ni.affine)).dataobj) > 0
+
     image = np.asarray(image_nii.dataobj, dtype=np.float32)
     b, lab = canon(brain), canon(label)
     b &= image > 0
     inverted = np.where(b, 1.0 - image / image[b].max(), 0.0).astype(np.float32)
-    inverted[b & (inverted <= 0)] = 1e-6                                     # 0 is reserved for "outside the brain"
+    inverted[b & (inverted <= 0)] = 1e-6  # 0 is reserved for "outside the brain"
     return inverted, lab.astype(np.uint8), image_nii.affine, None
 
 
-def build_grid(case: str, inverted: np.ndarray, affine, header, work: str, label: np.ndarray = None, dst: str = None) -> dict:
+def build_grid(
+    case: str, inverted: np.ndarray, affine, header, work: str, label: np.ndarray | None = None, dst: str | None = None
+) -> dict:
     """The paper's grid builder (code/gitter_c_bauen.py ``fall``) on a one-case source folder. header None = saved
     without a header, as prepare_source of the own-cohort pipeline does."""
     import nibabel as nib
+
     src, dst = os.path.join(work, "source"), dst or os.path.join(work, "grid")
     os.makedirs(os.path.join(src, case), exist_ok=True)
     label = np.zeros(inverted.shape, np.uint8) if label is None else label.astype(np.uint8)
@@ -185,14 +207,17 @@ def build_grid(case: str, inverted: np.ndarray, affine, header, work: str, label
         nib.save(nib.Nifti1Image(inverted, affine), f"{src}/{case}/{case}_image.nii.gz")
         nib.save(nib.Nifti1Image(label, affine), f"{src}/{case}/{case}_label.nii.gz")
     else:
-        hdr = header.copy(); hdr.set_data_dtype(np.float32)
+        hdr = header.copy()
+        hdr.set_data_dtype(np.float32)
         nib.save(nib.Nifti1Image(inverted, affine, hdr), f"{src}/{case}/{case}_image.nii.gz")
-        hdr8 = header.copy(); hdr8.set_data_dtype(np.uint8)
+        hdr8 = header.copy()
+        hdr8.set_data_dtype(np.uint8)
         nib.save(nib.Nifti1Image(label, affine, hdr8), f"{src}/{case}/{case}_label.nii.gz")
     sys.path.insert(0, os.path.join(ROOT, "code"))
     keep = os.environ.get("CUDA_VISIBLE_DEVICES")
-    import gitter_c_bauen as builder                  # its import hides the GPU for its own worker processes ...
-    if keep is None:                                  # ... restore the setting for this process (CUDA is not initialised yet)
+    import gitter_c_bauen as builder  # its import hides the GPU for its own worker processes ...
+
+    if keep is None:  # ... restore the setting for this process (CUDA is not initialised yet)
         os.environ.pop("CUDA_VISIBLE_DEVICES", None)
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = keep
@@ -210,17 +235,26 @@ def own_frst_on_grid(frst_path: str, ni, info: dict, grid_shape, profile: str = 
     first for the own profile, like the image)."""
     import nibabel as nib
     from scipy import ndimage
-    fni = nib.load(frst_path)
+
+    fni = load(frst_path)
     if fni.shape[:3] != ni.shape[:3]:
         raise SystemExit(f"--frst {fni.shape} does not match the scan {ni.shape}")
     if profile == "own":
         fni = nib.as_closest_canonical(nib.Nifti1Image(np.asarray(fni.dataobj, dtype=np.float32), ni.affine))
     fr = np.asarray(fni.dataobj, dtype=np.float32)
-    s = np.sqrt((fni.affine[:3, :3] ** 2).sum(0))
+    s = np.sqrt((np.asarray(fni.affine, float)[:3, :3] ** 2).sum(0))
     r = np.array(GRID_MM) / s
     off = np.array(info["crop_offset_quellvoxel"], float)
-    return ndimage.affine_transform(fr, r, offset=off, output_shape=tuple(grid_shape), order=1, mode="nearest",
-                                    output=np.float32)
+    # scipy takes one offset per axis (its annotation says float)
+    return ndimage.affine_transform(
+        fr,
+        r,
+        offset=off,  # pyright: ignore[reportArgumentType]
+        output_shape=tuple(grid_shape),
+        order=1,
+        mode="nearest",
+        output=np.float32,
+    )
 
 
 # ----------------------------------------------------------------------------------------------- model
@@ -230,8 +264,11 @@ def load_models(model_dir: str, device: str):
     import torch
     import cv5
     import turnier  # noqa: F401  -- registers the networks in cv5
+
     cv5.DEV = device
-    files = sorted(glob.glob(os.path.join(model_dir, "*", "modell.pt"))) or sorted(glob.glob(os.path.join(model_dir, "modell.pt")))
+    files = sorted(glob.glob(os.path.join(model_dir, "*", "modell.pt"))) or sorted(
+        glob.glob(os.path.join(model_dir, "modell.pt"))
+    )
     if not files:
         raise SystemExit(f"no <member>/modell.pt (with meta.json next to it) in {model_dir}")
     models = []
@@ -246,31 +283,37 @@ def load_models(model_dir: str, device: str):
 def predict_grid(models, case: str, image: np.ndarray, frst: np.ndarray, affine) -> np.ndarray:
     """Mean of cv5.proba_fall over the members, quantised to uint8 / 255 like the stored maps of the paper."""
     import cv5
-    turn = lambda a: np.ascontiguousarray(a.transpose(2, 1, 0))
+
+    def turn(a):
+        return np.ascontiguousarray(a.transpose(2, 1, 0))
+
     cv5.FA = dict(recs={case: dict(img=turn(image), frs=turn(frst), fold=0, affine=affine)})
     p = np.mean([cv5.proba_fall(m, case, nch=nch)[0] for m, nch in models], axis=0)
     p8 = np.round(p * 255).astype(np.uint8)
-    return np.ascontiguousarray(p8.transpose(2, 1, 0)).astype(np.float32) / 255.0      # (x, y, z)
+    return np.ascontiguousarray(p8.transpose(2, 1, 0)).astype(np.float32) / 255.0  # (x, y, z)
 
 
 # ----------------------------------------------------------------------------------------------- CSF rule
-def synthseg_on_grid(restore_path: str, grid_img, work: str, log) -> Optional[np.ndarray]:
-    import nibabel as nib
-    import nibabel.processing
+def synthseg_on_grid(restore_path: str, grid_img, work: str, log) -> np.ndarray | None:
+    from nibabel.processing import resample_from_to
+
     fs = os.path.join(os.environ.get("FREESURFER_HOME", "/usr/local/freesurfer"), "bin", "mri_synthseg")
     exe = fs if os.path.exists(fs) else shutil.which("mri_synthseg")
     if not exe:
-        warn("--csf-rule: mri_synthseg (FreeSurfer) not found -> CSF rule skipped. Expect more false positives in "
-             "sulcal/ventricular CSF (on VALDO the rule removed 98 of 176 stage-1 false positives).")
+        warn(
+            "--csf-rule: mri_synthseg (FreeSurfer) not found -> CSF rule skipped. Expect more false positives in "
+            "sulcal/ventricular CSF (on VALDO the rule removed 98 of 176 stage-1 false positives)."
+        )
         return None
     out = os.path.join(work, "synthseg.nii.gz")
-    r = subprocess.run([exe, "--i", restore_path, "--o", out, "--robust", "--cpu", "--threads", "4"],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        [exe, "--i", restore_path, "--o", out, "--robust", "--cpu", "--threads", "4"], capture_output=True, text=True
+    )
     if r.returncode != 0 or not os.path.exists(out):
         warn(f"mri_synthseg failed (rc {r.returncode}) -> CSF rule skipped")
         return None
     log("CSF rule: SynthSeg on the bias-corrected scan")
-    seg = nibabel.processing.resample_from_to(nib.load(out), grid_img, order=0)
+    seg = resample_from_to(load(out), grid_img, order=0)
     return np.asarray(seg.dataobj).astype(np.int32)
 
 
@@ -280,10 +323,14 @@ def load_stage2(path: str):
     import torch
     import torch.nn as nn
     from cmb.stage2.final_classifier import build_net
+
     b = torch.load(path, map_location="cpu", weights_only=False)
     nets = []
     for sd in b["members"]:
-        net = build_net(nn); net.load_state_dict(sd); net.eval(); nets.append(net)
+        net = build_net(nn)
+        net.load_state_dict(sd)
+        net.eval()
+        nets.append(net)
     return b, nets
 
 
@@ -293,9 +340,10 @@ def stage2_candidates(prob: np.ndarray, image: np.ndarray, frst: np.ndarray, bun
     stored as float16 in (channel, z, y, x)). Returns (component label volume, component ids, patches)."""
     from cmb.stage2.candidates import crop, CONNECTIVITY_26, MAX_COMPONENT_VOXELS
     from scipy import ndimage
+
     z, y, x = bundle.get("stored_patch", [20, 40, 40])
     half = (x // 2, y // 2, z // 2)
-    labels, _ = ndimage.label(prob > bundle.get("candidate_threshold", 0.15), structure=CONNECTIVITY_26)
+    labels, _ = components(prob > bundle.get("candidate_threshold", 0.15), CONNECTIVITY_26)
     ids, patches = [], []
     for index, box in enumerate(ndimage.find_objects(labels), 1):
         if box is None:
@@ -304,7 +352,7 @@ def stage2_candidates(prob: np.ndarray, image: np.ndarray, frst: np.ndarray, bun
         voxels = int(mask.sum())
         if voxels * 0.25 < bundle.get("candidate_min_mm3", 1.0) or voxels > MAX_COMPONENT_VOXELS:
             continue
-        centre = [int(round(c)) + s.start for c, s in zip(ndimage.center_of_mass(mask), box)]
+        centre = [int(round(float(c))) + s.start for c, s in zip(ndimage.center_of_mass(mask), box, strict=True)]
         patch = np.stack([crop(v, centre, half) for v in (image, frst, prob)])
         patches.append(np.transpose(patch, (0, 3, 2, 1)).astype(np.float16))
         ids.append(index)
@@ -314,11 +362,14 @@ def stage2_candidates(prob: np.ndarray, image: np.ndarray, frst: np.ndarray, bun
 def stage2_scores(patches: np.ndarray, bundle: dict, nets, device: str = "cpu") -> np.ndarray:
     """Mean sigmoid of the members on the centred crop (the test-time path of cmb.stage2.classifier.fit_predict_cnn)."""
     import torch
+
     if len(patches) == 0:
         return np.zeros(0, np.float32)
     c = bundle["crop"]
-    z0, y0, x0 = ((s - k) // 2 for s, k in zip(patches.shape[-3:], c))
-    x = torch.from_numpy(np.ascontiguousarray(patches[..., z0:z0 + c[0], y0:y0 + c[1], x0:x0 + c[2]], dtype=np.float32))
+    z0, y0, x0 = ((s - k) // 2 for s, k in zip(patches.shape[-3:], c, strict=True))
+    x = torch.from_numpy(
+        np.ascontiguousarray(patches[..., z0 : z0 + c[0], y0 : y0 + c[1], x0 : x0 + c[2]], dtype=np.float32)
+    )
     out = np.zeros(len(patches), np.float32)
     with torch.no_grad():
         for net in nets:
@@ -327,20 +378,33 @@ def stage2_scores(patches: np.ndarray, bundle: dict, nets, device: str = "cpu") 
 
 
 # ----------------------------------------------------------------------------------------------- one scan
-def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str] = None, mask: Optional[str] = None,
-            bias: str = "auto", csf: bool = False, keep_work: bool = False, log=print, cell: dict = None,
-            profile: str = "own", stage2=None) -> dict:
+def run_one(
+    scan: str,
+    out_dir: str,
+    model_dir: str,
+    models,
+    frst: str | None = None,
+    mask: str | None = None,
+    bias: str = "auto",
+    csf: bool = False,
+    keep_work: bool = False,
+    log=print,
+    cell: dict | None = None,
+    profile: str = "own",
+    stage2=None,
+) -> dict:
     import nibabel as nib
-    import nibabel.processing  # noqa: F401
+    from nibabel.processing import resample_from_to
     from scipy import ndimage
     from cmb.transfer.evaluate import THRESHOLD, MIN_MM3, MAX_VOXELS, VOXEL_MM3
     from cmb.analysis.missed_lesions import majority_label
+
     t0 = time.time()
     name = stem_of(scan)
     os.makedirs(out_dir, exist_ok=True)
     work = tempfile.mkdtemp(prefix=f".cmb_{name}_", dir=out_dir)
     try:
-        ni = nib.load(scan)
+        ni = load(scan)
         img = np.asarray(ni.dataobj, dtype=np.float32)
         if img.ndim == 4 and img.shape[3] == 1:
             img = img[..., 0]
@@ -352,33 +416,38 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
         inverted, _, src_affine, src_header = source_volumes(restore, brain, np.zeros(img.shape, np.uint8), ni, profile)
         case = "case0"
         info = build_grid(case, inverted, src_affine, src_header, work)
-        g_img = nib.load(f"{info['dir']}/{case}_image.nii.gz")
+        g_img = load(f"{info['dir']}/{case}_image.nii.gz")
         image = np.asarray(g_img.dataobj, dtype=np.float32)
         if frst:
-            warn("--frst: using your FRST map resampled to the grid; the model was trained on the FRST this code "
-                 "computes on the grid (code/frst.py, radii 1-3 mm). Different scaling changes the result.")
+            warn(
+                "--frst: using your FRST map resampled to the grid; the model was trained on the FRST this code "
+                "computes on the grid (code/frst.py, radii 1-3 mm). Different scaling changes the result."
+            )
             fr = own_frst_on_grid(frst, ni, info, image.shape, profile)
         else:
-            fr = np.asarray(nib.load(f"{info['dir']}/{case}_frst.nii.gz").dataobj, dtype=np.float32)
+            fr = np.asarray(load(f"{info['dir']}/{case}_frst.nii.gz").dataobj, dtype=np.float32)
         prob = predict_grid(models, case, image, fr, g_img.affine)
-        cell = cell or dict(threshold=THRESHOLD, min_mm3=MIN_MM3, max_voxels=MAX_VOXELS)   # the paper's fixed cell
-        comp, nc = ndimage.label(prob > cell["threshold"], structure=np.ones((3, 3, 3), bool))   # = evaluate.post_process
+        cell = cell or dict(threshold=THRESHOLD, min_mm3=MIN_MM3, max_voxels=MAX_VOXELS)  # the paper's fixed cell
+        comp, nc = components(prob > cell["threshold"], np.ones((3, 3, 3), bool))  # = evaluate.post_process
         size = np.bincount(comp.ravel(), minlength=nc + 1)
-        ok = (size * VOXEL_MM3 >= cell["min_mm3"]) & (size <= cell["max_voxels"]); ok[0] = False
+        ok = (size * VOXEL_MM3 >= cell["min_mm3"]) & (size <= cell["max_voxels"])
+        ok[0] = False
         keep = ok[comp]
         score_map = np.zeros(prob.shape, np.float32)
-        if stage2 is not None:              # stage 2 replaces the fixed cell: accepted candidates of the 0.15 map
+        if stage2 is not None:  # stage 2 replaces the fixed cell: accepted candidates of the 0.15 map
             bundle, nets = stage2
             comp2, ids, patches = stage2_candidates(prob, image, fr, bundle)
             scores = stage2_scores(patches, bundle, nets)
             keep = np.zeros(prob.shape, bool)
-            for i, s in zip(ids, scores):
+            for i, s in zip(ids, scores, strict=True):
                 score_map[comp2 == i] = s
                 if s >= bundle["threshold"]:
                     keep |= comp2 == i
-            log(f"stage 2: {int((scores >= bundle['threshold']).sum())} of {len(ids)} candidates accepted "
-                f"(threshold {bundle['threshold']})")
-        labels, n = ndimage.label(keep, structure=np.ones((3, 3, 3), bool))
+            log(
+                f"stage 2: {int((scores >= bundle['threshold']).sum())} of {len(ids)} candidates accepted "
+                f"(threshold {bundle['threshold']})"
+            )
+        labels, n = components(keep, np.ones((3, 3, 3), bool))
         n_csf = 0
         if csf:
             rpath = os.path.join(work, "restore.nii.gz")
@@ -387,43 +456,76 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
             if seg is not None:
                 for c, box in enumerate(ndimage.find_objects(labels), start=1):
                     if box is not None and majority_label(labels[box] == c, seg[box]) in CSF_LABELS:
-                        labels[labels == c] = 0; n_csf += 1
-                labels, n = ndimage.label(labels > 0, structure=np.ones((3, 3, 3), bool))
+                        labels[labels == c] = 0
+                        n_csf += 1
+                labels, n = components(labels > 0, np.ones((3, 3, 3), bool))
         # rows on the grid (0.5 x 0.5 x 1 mm): volume, diameter of the largest single-slice cross-section
         rows = []
         for c, box in enumerate(ndimage.find_objects(labels), start=1):
             m = labels[box] == c
-            vox = int(m.sum()); vol = vox * float(np.prod(GRID_MM))
-            area = float(m.sum(axis=(0, 1)).max()) * GRID_MM[0] * GRID_MM[1]          # largest axial cross-section, mm2
+            vox = int(m.sum())
+            vol = vox * float(np.prod(GRID_MM))
+            area = float(m.sum(axis=(0, 1)).max()) * GRID_MM[0] * GRID_MM[1]  # largest axial cross-section, mm2
             diam = 2.0 * np.sqrt(area / np.pi)
-            cg = np.array([v + s.start for v, s in zip(ndimage.center_of_mass(m), box)])
+            cg = np.array([v + s.start for v, s in zip(ndimage.center_of_mass(m), box, strict=True)])
             world = (g_img.affine @ np.r_[cg, 1.0])[:3]
-            native = (np.linalg.inv(ni.affine) @ np.r_[world, 1.0])[:3]
-            rows.append(dict(id=c, x_vox=round(float(native[0]), 1), y_vox=round(float(native[1]), 1),
-                             z_vox=round(float(native[2]), 1), x_mm=round(float(world[0]), 2),
-                             y_mm=round(float(world[1]), 2), z_mm=round(float(world[2]), 2),
-                             volume_mm3=round(vol, 2), diameter_mm=round(diam, 2),
-                             size_class="<2 mm" if diam < 2 else ("2-5 mm" if diam <= 5 else ">5 mm"),
-                             stage1_max_prob=round(float(prob[box][m].max()), 3),
-                             stage2_score=round(float(score_map[box][m].max()), 3) if stage2 is not None else ""))
+            native = (np.linalg.inv(np.asarray(ni.affine, float)) @ np.r_[world, 1.0])[:3]
+            rows.append(
+                dict(
+                    id=c,
+                    x_vox=round(float(native[0]), 1),
+                    y_vox=round(float(native[1]), 1),
+                    z_vox=round(float(native[2]), 1),
+                    x_mm=round(float(world[0]), 2),
+                    y_mm=round(float(world[1]), 2),
+                    z_mm=round(float(world[2]), 2),
+                    volume_mm3=round(vol, 2),
+                    diameter_mm=round(diam, 2),
+                    size_class="<2 mm" if diam < 2 else ("2-5 mm" if diam <= 5 else ">5 mm"),
+                    stage1_max_prob=round(float(prob[box][m].max()), 3),
+                    stage2_score=round(float(score_map[box][m].max()), 3) if stage2 is not None else "",
+                )
+            )
         # back to the original scan grid
         ref = nib.Nifti1Image(np.zeros(ni.shape[:3], np.float32), ni.affine)
-        p_nat = nib.processing.resample_from_to(nib.Nifti1Image(prob, g_img.affine), ref, order=1, cval=0.0)
-        l_nat = nib.processing.resample_from_to(nib.Nifti1Image(labels.astype(np.int16), g_img.affine), ref, order=0, cval=0)
-        hdr = ni.header.copy(); hdr.set_data_dtype(np.float32)
-        nib.save(nib.Nifti1Image(np.clip(np.asarray(p_nat.dataobj, np.float32), 0, 1), ni.affine, hdr),
-                 os.path.join(out_dir, f"{name}_cmb_prob.nii.gz"))
+        p_nat = resample_from_to(nib.Nifti1Image(prob, g_img.affine), ref, order=1, cval=0.0)
+        l_nat = resample_from_to(nib.Nifti1Image(labels.astype(np.int16), g_img.affine), ref, order=0, cval=0)
+        hdr = ni.header.copy()
+        hdr.set_data_dtype(np.float32)
+        nib.save(
+            nib.Nifti1Image(np.clip(np.asarray(p_nat.dataobj, np.float32), 0, 1), ni.affine, hdr),
+            os.path.join(out_dir, f"{name}_cmb_prob.nii.gz"),
+        )
         hdr.set_data_dtype(np.int16)
-        nib.save(nib.Nifti1Image(np.asarray(l_nat.dataobj).astype(np.int16), ni.affine, hdr),
-                 os.path.join(out_dir, f"{name}_cmb_mask.nii.gz"))
+        nib.save(
+            nib.Nifti1Image(np.asarray(l_nat.dataobj).astype(np.int16), ni.affine, hdr),
+            os.path.join(out_dir, f"{name}_cmb_mask.nii.gz"),
+        )
         with open(os.path.join(out_dir, f"{name}_cmb.csv"), "w", newline="") as f:
-            fields = ["id", "x_vox", "y_vox", "z_vox", "x_mm", "y_mm", "z_mm", "volume_mm3", "diameter_mm", "size_class",
-                      "stage1_max_prob", "stage2_score"]
-            w = csv.DictWriter(f, fieldnames=fields); w.writeheader(); w.writerows(rows)
+            fields = [
+                "id",
+                "x_vox",
+                "y_vox",
+                "z_vox",
+                "x_mm",
+                "y_mm",
+                "z_mm",
+                "volume_mm3",
+                "diameter_mm",
+                "size_class",
+                "stage1_max_prob",
+                "stage2_score",
+            ]
+            w = csv.DictWriter(f, fieldnames=fields)
+            w.writeheader()
+            w.writerows(rows)
         classes = {k: sum(r["size_class"] == k for r in rows) for k in ("<2 mm", "2-5 mm", ">5 mm")}
-        print(f"{name}: {len(rows)} CMB ({classes['<2 mm']} <2 mm, {classes['2-5 mm']} 2-5 mm, {classes['>5 mm']} >5 mm)"
-              + (f", {n_csf} removed by the CSF rule" if csf else "") + f"  [{time.time() - t0:.0f} s] -> {out_dir}",
-              flush=True)
+        print(
+            f"{name}: {len(rows)} CMB ({classes['<2 mm']} <2 mm, {classes['2-5 mm']} 2-5 mm, {classes['>5 mm']} >5 mm)"
+            + (f", {n_csf} removed by the CSF rule" if csf else "")
+            + f"  [{time.time() - t0:.0f} s] -> {out_dir}",
+            flush=True,
+        )
         return dict(name=name, n=len(rows), classes=classes, cell=cell)
     finally:
         if not keep_work:
@@ -434,35 +536,69 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
 def add_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("input", nargs="?", help="scan (.nii/.nii.gz) or folder of scans (same as -i)")
     ap.add_argument("-i", "--input", dest="input_opt", help="scan or folder of scans")
-    ap.add_argument("-o", "--output", default=None, help="output folder (default: next to the scan, <name>_cmb/ ... "
-                    "for a folder: <folder>_cmb/)")
+    ap.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="output folder (default: next to the scan, <name>_cmb/ ... for a folder: <folder>_cmb/)",
+    )
     ap.add_argument("--frst", "-frst", default=None, help="your own FRST map on the scan grid (default: computed)")
     ap.add_argument("--brain-mask", "-b", default=None, help="brain mask on the scan grid (default: see steps)")
-    ap.add_argument("-m", "--model", default=None,
-                    help="model folder (<member>/modell.pt + meta.json, as written by cmb.training.full_data or "
-                         "scripts/paper/phase2_finetune/run_block.py). Default: the public VALDO T2* model")
+    ap.add_argument(
+        "-m",
+        "--model",
+        default=None,
+        help="model folder (<member>/modell.pt + meta.json, as written by cmb.training.full_data or "
+        "scripts/paper/phase2_finetune/run_block.py). Default: the public VALDO T2* model",
+    )
     ap.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     ap.add_argument("--bias", default="auto", choices=["auto", "fsl", "n4"], help="bias correction method")
     ap.add_argument("--no-bias-correction", action="store_true", help="the scan is already bias-corrected")
     ap.add_argument("--csf-rule", action="store_true", help="drop components in CSF (needs FreeSurfer mri_synthseg)")
     ap.add_argument("--keep-work", action="store_true", help="keep the intermediate grid files")
-    ap.add_argument("--stage2", nargs="?", const="valdo", default=None, metavar="CLASSIFIER",
-                    help="run the stage-2 candidate classifier after stage 1 (instead of the fixed cell): without a value "
-                         "the public VALDO-only classifier (cmb get-model valdo_stage2), or a classifier.pt "
-                         "(cmb.stage2.final_classifier); off by default (the paper's n = 0 chain)")
-    ap.add_argument("--profile", choices=PROFILES, default="own",
-                    help="how the scan becomes the model's input: own = the paper's pipeline for its own cohorts (RAS+ "
-                         "reorientation, brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d")
+    ap.add_argument(
+        "--stage2",
+        nargs="?",
+        const="valdo",
+        default=None,
+        metavar="CLASSIFIER",
+        help="run the stage-2 candidate classifier after stage 1 (instead of the fixed cell): without a value "
+        "the public VALDO-only classifier (cmb get-model valdo_stage2), or a classifier.pt "
+        "(cmb.stage2.final_classifier); off by default (the paper's n = 0 chain)",
+    )
+    ap.add_argument(
+        "--profile",
+        choices=PROFILES,
+        default="own",
+        help="how the scan becomes the model's input: own = the paper's pipeline for its own cohorts (RAS+ "
+        "reorientation, brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d",
+    )
 
 
 def main(argv=None) -> None:
-    ap = argparse.ArgumentParser(prog="cmb predict", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        prog="cmb predict", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     add_arguments(ap)
     a = ap.parse_args(argv)
     run(a)
 
 
-def run(a) -> None:
+def check_inputs(scan: str, mask: str | None, frst: str | None) -> None:
+    """Brain mask and FRST map given for a scan must be on its voxel grid, the mask on the scan's data (cmb.checks);
+    checked before the model is loaded."""
+    if not (mask or frst):
+        return
+    ni = load(scan)
+    for path in (mask, frst):
+        if path:
+            checks.same_grid(ni, load(path), scan, path)
+    if mask:
+        img = np.nan_to_num(np.asarray(ni.dataobj, dtype=np.float32))
+        checks.mask_inside_image(img[..., 0] if img.ndim == 4 else img, np.asarray(load(mask).dataobj), mask)
+
+
+def run(a) -> list[dict]:
     src = a.input_opt or a.input
     if not src:
         raise SystemExit("give a scan or folder: cmb predict -i scan.nii.gz [-o out/]")
@@ -471,39 +607,68 @@ def run(a) -> None:
         raise SystemExit("--frst works with a single scan only")
     if a.brain_mask and len(scans) > 1:
         raise SystemExit("--brain-mask works with a single scan only")
-    out = a.output or (src.rstrip("/") + "_cmb" if os.path.isdir(src) else os.path.join(os.path.dirname(os.path.abspath(src)),
-                                                                                        stem_of(src) + "_cmb"))
+    check_inputs(scans[0], a.brain_mask, a.frst)
+    out = a.output or (
+        src.rstrip("/") + "_cmb"
+        if os.path.isdir(src)
+        else os.path.join(os.path.dirname(os.path.abspath(src)), stem_of(src) + "_cmb")
+    )
     import torch
+
     device = a.device if a.device != "auto" else ("cuda" if torch.cuda.is_available() else "cpu")
     if a.model:
         model_dir = a.model
         print(f"model: own model {model_dir} (the sequence you trained it on)", flush=True)
     else:
         from cmb.pretrained import get_model, TAG
+
         model_dir = get_model("valdo_t2")
-        print(f"model: VALDO T2* (T2*-GRE scans only), cmb-valdo-chain {TAG}, stage 1 + fixed cell 0.3 / 2 mm3; "
-              f"for other sequences fine-tune locally and use -m", flush=True)
+        print(
+            f"model: VALDO T2* (T2*-GRE scans only), cmb-valdo-chain {TAG}, stage 1 + fixed cell 0.3 / 2 mm3; "
+            f"for other sequences fine-tune locally and use -m",
+            flush=True,
+        )
     print(f"device: {device}; {len(scans)} scan(s) -> {out}", flush=True)
     models = load_models(model_dir, device)
     stage2 = None
     if a.stage2:
         if a.stage2 == "valdo":
             from cmb.pretrained import get_model as _gm
+
             path = os.path.join(_gm("valdo_stage2"), "classifier.pt")
         else:
             path = a.stage2 if a.stage2.endswith(".pt") else os.path.join(a.stage2, "classifier.pt")
         stage2 = load_stage2(path)
-        print(f"stage 2: {path} (threshold {stage2[0]['threshold']}, trained on {stage2[0].get('trained_on')})", flush=True)
+        print(
+            f"stage 2: {path} (threshold {stage2[0]['threshold']}, trained on {stage2[0].get('trained_on')})",
+            flush=True,
+        )
     from cmb.commands import model_cell
+
     cell = model_cell(model_dir)
-    print(f"post-processing: probability > {cell['threshold']}, components >= {cell['min_mm3']} mm3 and "
-          f"<= {cell['max_voxels']} voxels" + ("" if a.model else " (the paper's fixed cell, chosen on VALDO)"), flush=True)
+    print(
+        f"post-processing: probability > {cell['threshold']}, components >= {cell['min_mm3']} mm3 and "
+        f"<= {cell['max_voxels']} voxels" + ("" if a.model else " (the paper's fixed cell, chosen on VALDO)"),
+        flush=True,
+    )
     bias = "none" if a.no_bias_correction else a.bias
     total, results = 0, []
     for s in scans:
-        r = run_one(s, out, model_dir, models, frst=a.frst, mask=a.brain_mask, bias=bias, csf=a.csf_rule,
-                    keep_work=a.keep_work, log=lambda m: print("  " + m, flush=True), cell=cell, profile=a.profile,
-                    stage2=stage2)
+        r = run_one(
+            s,
+            out,
+            model_dir,
+            models,
+            frst=a.frst,
+            mask=a.brain_mask,
+            bias=bias,
+            csf=a.csf_rule,
+            keep_work=a.keep_work,
+            log=lambda m: print("  " + m, flush=True),
+            cell=cell,
+            profile=a.profile,
+            stage2=stage2,
+        )
         total += r["n"]
         r.update(output=out, csv=os.path.join(out, f"{r['name']}_cmb.csv"))
         results.append(r)

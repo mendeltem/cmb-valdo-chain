@@ -140,7 +140,7 @@ candidates (a 1-epoch model proposes none, so the quick try above leaves it out;
 |---|---|---|---|
 | `preprocess -f True` | | same | scans already skull-stripped and bias-corrected (no FSL) |
 | `preprocess -fold` | 5 | 5 | folds written into `manifest.json` (stratified by CMB count) |
-| `preprocess -ir / -lr / -br` | | same | suffix at the END of the file name; searched recursively (flat folder or BIDS tree; `derivatives/` is not searched for scans) |
+| `preprocess -ir / -lr / -br` | | same | suffix at the END of the file name; searched recursively (flat folder or BIDS tree; `derivatives/` is not searched for scans); names ending in `_brainmask`, `_mask`, `_roi` or the `-lr` / `-br` suffix are never scans |
 | `preprocess / predict --profile` | own | (none) | `own` = the paper's pipeline for its own cohorts (RAS+ reorientation, brain = mask and image > 0); `valdo` = exactly the VALDO grid `dev/gitter_d` (CHANGES.md) |
 | `train -ep / -ilr / -bs` | 60 / 3e-4 / 4 | 60 / 3e-4 / 4 | epochs, learning rate, batch size (recipe of `code/cv5.py`) |
 | `train --seeds` | 42 1 | (one model) | one member per seed; predictions average the members |
@@ -182,7 +182,7 @@ python examples/python/tutorial_finetune.py
 ```python
 from cmb import env, get_model, predict
 
-get_model("valdo_t2")                     # downloaded once, SHA-256 checked
+get_model("valdo_t2")  # downloaded once, SHA-256 checked
 result = predict(env())
 print(f"{result['n']} CMB found -> {result['csv']}")
 ```
@@ -247,6 +247,16 @@ bash configs/smoke.sh cpu
   10 lines each, `.env` committed with relative paths only.
 - `tests/test_valdo.py`: the released weights download, load and predict a VALDO case on the CPU (skipped without VALDO).
 - `tests/test_privacy.py`: no machine paths, in-house cohort names or non-VALDO subject ids in the repository.
+- `tests/test_checks.py`: the run-stopping input checks (`cmb/checks.py`): mask, label or FRST map on another grid or in
+  another orientation than the scan, an empty brain mask or one off the scan's data, a label outside the scan, repeated
+  case ids, a labelled scan that would not be scored.
+- `tests/test_properties.py`: property tests (hypothesis) on phantoms: a left-right flip moves the detections with it,
+  prediction = reference gives F1 = 1, an empty prediction gives no true positive, `_roi` / `_brainmask` names are
+  never scans.
+- `tests/test_frozen.py`: the research code is byte-identical to the recorded paper state (`tests/frozen.sha256`).
+- Static checks (`pip install -e ".[dev]"`; configured in `pyproject.toml`): `ruff`, `pyright`, `lint-imports` (the
+  research code never imports the command-line layer). `.github/workflows/checks.yml` runs them and
+  `pytest tests -m "not valdo"` on every push; the VALDO tests (marker `valdo`) run locally only. `AGENTS.md`: the rules.
 - `cmb/tests/`: the research tests as they ran (several need the stored research results).
 
 ## Regression check against the paper (public VALDO data, CPU)
