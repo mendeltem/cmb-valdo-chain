@@ -33,7 +33,7 @@ import nibabel as nib
 import numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, ROOT)
 from cmb.transfer.evaluate import CONNECTIVITY_26, MAX_VOXELS, MIN_MM3, VOXEL_MM3    # noqa: E402
 
@@ -98,11 +98,11 @@ def main() -> None:
         for t in args.thresholds:
             per_threshold[t][name] = hits[t]
             counts[t][name] = candidates[t]
-        print(f"{name}: " + "  ".join(f"t={t:g}: {candidates[t]} cand., {len(hits[t])} reached" for t in args.thresholds), flush=True)
+        print(f"{name}: " + "  ".join(f"t={t:g}: {candidates[t]} Kand., {len(hits[t])} erreicht" for t in args.thresholds), flush=True)
 
     total = len({l for l in lesions if l.split("#")[0] in cases_seen})
-    print(f"\n{len(cases_seen)} cases, {total} reference microbleeds\n")
-    print(f"{'first stage':22s} {'threshold':>9s} {'candidates':>11s} {'reached':>9s} {'ceil. S':>8s} {'F1 ceil.':>9s}")
+    print(f"\n{len(cases_seen)} Faelle, {total} Referenz-Blutungen\n")
+    print(f"{'Erste Stufe':22s} {'Schwelle':>9s} {'Kandidaten':>11s} {'erreicht':>9s} {'Decke S':>8s} {'F1-Decke':>9s}")
     for name in runs:
         for t in args.thresholds:
             k = len(per_threshold[t][name])
@@ -120,7 +120,7 @@ def main() -> None:
             out["union"][f"{t:g}"] = dict(candidates_summed=cand, reached=len(union), ceiling_sensitivity=round(len(union) / total, 3),
                                           perfect_f1=round(perfect_chain_f1(len(union), total), 3), gain_over_best=len(union) - best, only_this_run=only)
             print(f"{'VEREINIGUNG':22s} {t:9g} {cand:11d} {len(union):9d} {len(union) / total:8.3f} {perfect_chain_f1(len(union), total):9.3f}"
-                  f"   (+{len(union) - best} versus the best single run; reached by only one run: {only})")
+                  f"   (+{len(union) - best} gegen den besten Einzellauf; nur von einem Lauf erreicht: {only})")
     if args.json:
         out["total_lesions"] = total; out["cases"] = len(cases_seen)
         json.dump(out, open(absolute(args.json), "w"), indent=1)

@@ -3,7 +3,7 @@
 For each ported architecture: load the weights of a finished tournament fold into both
 implementations and compare the outputs on a random patch of the real (odd) patch size.
 
-    python -m cmb.tests.test_models_match_legacy          (run from valdo-t2s/)
+    python -m cmb.tests.test_models_match_legacy          (run from the repository root)
 """
 import os
 import sys

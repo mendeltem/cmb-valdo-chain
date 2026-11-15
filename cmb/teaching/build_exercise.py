@@ -31,7 +31,7 @@ import nibabel as nib
 import numpy as np
 from PIL import Image
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 
 # Hand-picked from the 4 mm cohort: few slices, each microbleed visible in one or two of them.
 # (case, first slice, number of slices, difficulty key)

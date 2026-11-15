@@ -1,44 +1,42 @@
 #!/usr/bin/env python3
-"""Tissue map + CMB (Claude 18 Sep 2026, user request: output GM / WM / CSF / CMB instead of just CMB).
+"""Gewebekarte + CMB (Claude 18.09.2026, Nutzerwunsch: Ausgabe GM / WM / CSF / CMB statt nur CMB).
 
-Path A -- without new training: the SynthSeg map (dev/synthseg/<id>_synthseg.nii.gz, grid C,
-FreeSurfer label values) is combined into three tissues, the CMB prediction of a network
-is added on top as a fourth class:
+Weg A -- ohne neues Training: die SynthSeg-Karte (dev/synthseg/<id>_synthseg.nii.gz, Gitter C,
+FreeSurfer-Labelwerte) wird zu drei Geweben zusammengefasst, die CMB-Vorhersage eines Netzes
+kommt als vierte Klasse darueber:
 
-    0 background   1 CSF   2 GM   3 WM   4 CMB
+    0 Hintergrund   1 CSF   2 GM   3 WM   4 CMB
 
-For this, per predicted component the LOCATION (majority of the SynthSeg labels under the
-component; if it lies entirely in the background, the nearest label within 3 voxels counts):
-    lobar (cortex + cerebral WM), deep (thalamus, basal ganglia, ventral DC),
-    infratentorial (brainstem, cerebellum), mesiotemporal (hippocampus, amygdala),
-    CSF (ventricles, free CSF), outside.
-A boundary that belongs in the report: deep white matter (internal/external capsule, corpus
-callosum, periventricular) is not separated by SynthSeg from the rest of the WM -- such CMB
-count here as lobar.
+Dazu je vorhergesagter Komponente der ORT (Mehrheit der SynthSeg-Labels unter der Komponente;
+liegt sie ganz im Hintergrund, zaehlt das naechste Label innerhalb von 3 Voxeln):
+    lobaer (Kortex + Grosshirn-WM), tief (Thalamus, Basalganglien, ventrales DC),
+    infratentoriell (Hirnstamm, Kleinhirn), mesiotemporal (Hippocampus, Amygdala),
+    liquor (Ventrikel, freier CSF), ausserhalb.
+Grenze, die in den Bericht gehoert: tiefes Marklager (Capsula interna/externa, Balken,
+periventrikulaer) trennt SynthSeg nicht vom uebrigen WM -- solche CMB zaehlen hier als lobaer.
 
-LABEL TABLE = FreeSurferColorLUT, checked 18 Sep against the values in the files
-(0,2,3,4,5,7,8,10-18,24,26,28,41-44,46,47,49-54,58,60). NOTE: code/we5.py takes as
-"ventricle" {4,12,13,22,23} and as CSF 17 -- in these files that is the left lateral
-ventricle, left PUTAMEN, left PALLIDUM (22/23 do not occur) and left HIPPOCAMPUS. The we5
-measurement "T1 filter costs 0.0090 F1" is therefore invalid; the table here is the
-correction, and the location table below (TP/FP per location) is the clean re-measurement
-of the question.
+LABELTABELLE = FreeSurferColorLUT, geprueft 18.09. an den Werten in den Dateien
+(0,2,3,4,5,7,8,10-18,24,26,28,41-44,46,47,49-54,58,60). ACHTUNG: code/we5.py nimmt als
+"Ventrikel" {4,12,13,22,23} und als CSF 17 -- das sind in diesen Dateien linker Seitenventrikel,
+linkes PUTAMEN, linkes PALLIDUM (22/23 kommen nicht vor) und linker HIPPOCAMPUS. Die we5-Messung
+"T1-Filter kostet 0.0090 F1" ist damit ungueltig; die Tabelle hier ist die Korrektur, und die
+Ortstabelle unten (TP/FP je Ort) ist die saubere Neumessung der Frage.
 
-Usage:
+Aufruf:
   python gewebekarte.py --netz ergebnisse/turnier/a01-attunet [--ohne-karten]
-  -> <netz>/gewebe/<id>_gewebe_cmb.nii.gz (uint8, grid C) and <netz>/gewebe/orte.json
-     (SUMS ONLY: per location number of predictions, of which TP components and FP; reference CMB per location).
+  -> <netz>/gewebe/<id>_gewebe_cmb.nii.gz (uint8, Gitter C) und <netz>/gewebe/orte.json
+     (NUR Summen: je Ort Zahl der Vorhersagen, davon TP-Komponenten und FP; Referenz-CMB je Ort).
 """
 import os, sys, json, glob, argparse
 import numpy as np
 import nibabel as nib
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+ROOT = os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 N26 = np.ones((3, 3, 3), bool)
 
-CSF = {4, 5, 14, 15, 24, 43, 44}                       # lateral/temporal horn L+R, 3rd, 4th ventricle, free CSF
-WM = {2, 41, 7, 46, 16}                                # cerebral WM, cerebellar WM, brainstem
+CSF = {4, 5, 14, 15, 24, 43, 44}                       # Seiten-/Unterhorn li+re, 3., 4. Ventrikel, freier CSF
+WM = {2, 41, 7, 46, 16}                                # Grosshirn-WM, Kleinhirn-WM, Hirnstamm
 GM = {3, 42, 8, 47, 10, 11, 12, 13, 17, 18, 26, 28, 49, 50, 51, 52, 53, 54, 58, 60}
 ORT = {}
 for _l in (2, 41, 3, 42):                 ORT[_l] = "lobaer"
@@ -59,7 +57,7 @@ def gewebe(seg):
 
 
 def ort_der_komponente(maske, seg):
-    """Majority label under the component; background only -> dilate the component by 3 voxels."""
+    """Mehrheitslabel unter der Komponente; nur Hintergrund -> Komponente um 3 Voxel weiten."""
     for it in (0, 3):
         m = ndimage.binary_dilation(maske, structure=N26, iterations=it) if it else maske
         w = seg[m]; w = w[w > 0]
@@ -69,7 +67,7 @@ def ort_der_komponente(maske, seg):
 
 
 def orte_zaehlen(bin_maske, seg, andere=None):
-    """-> {location: n} and, if `andere` is given, {location: n touching `andere`}."""
+    """-> {ort: n} und, falls `andere` gegeben, {ort: n beruehrt `andere`}."""
     lab, n = ndimage.label(bin_maske, structure=N26)
     alle = dict.fromkeys(ORTE, 0); treffer = dict.fromkeys(ORTE, 0)
     if n == 0:
@@ -87,8 +85,8 @@ def orte_zaehlen(bin_maske, seg, andere=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--netz", required=True, help="folder with fold<k>/<id>_pred.nii.gz")
-    ap.add_argument("--ohne-karten", action="store_true", help="only orte.json, do not write NIfTI")
+    ap.add_argument("--netz", required=True, help="Ordner mit fold<k>/<id>_pred.nii.gz")
+    ap.add_argument("--ohne-karten", action="store_true", help="nur orte.json, keine NIfTI schreiben")
     a = ap.parse_args()
     netz = a.netz if os.path.isabs(a.netz) else f"{ROOT}/{a.netz}"
     aus = f"{netz}/gewebe"; os.makedirs(aus, exist_ok=True)
@@ -116,11 +114,11 @@ def main():
     orte = {o: dict(vorhersagen=pred_n[o], davon_auf_referenz=pred_tp[o], fp=pred_n[o] - pred_tp[o],
                     referenz_cmb=ref_n[o], davon_gefunden=ref_gef[o]) for o in ORTE}
     erg = dict(netz=os.path.relpath(netz, ROOT), n_faelle=n_faelle, faelle_ohne_synthseg=ohne_seg,
-               klassen={"0": "background", "1": "CSF", "2": "GM", "3": "WM", "4": "CMB"},
-               grenze="deep white matter counts as lobar (SynthSeg does not separate it)", orte=orte)
+               klassen={"0": "Hintergrund", "1": "CSF", "2": "GM", "3": "WM", "4": "CMB"},
+               grenze="tiefes Marklager zaehlt als lobaer (SynthSeg trennt es nicht)", orte=orte)
     json.dump(erg, open(f"{aus}/orte.json", "w"), indent=1, ensure_ascii=False)
-    print(f"{erg['netz']}: {n_faelle} cases, {ohne_seg} without SynthSeg")
-    print(f"{'Location':16s} {'Pred.':>8s} {'on ref':>8s} {'FP':>5s} | {'Ref CMB':>7s} {'found':>8s}")
+    print(f"{erg['netz']}: {n_faelle} Faelle, {ohne_seg} ohne SynthSeg")
+    print(f"{'Ort':16s} {'Vorhers.':>8s} {'auf Ref':>8s} {'FP':>5s} | {'Ref-CMB':>7s} {'gefunden':>8s}")
     for o in ORTE:
         e = orte[o]
         print(f"{o:16s} {e['vorhersagen']:8d} {e['davon_auf_referenz']:8d} {e['fp']:5d} | "

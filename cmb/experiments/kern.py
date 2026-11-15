@@ -2,8 +2,8 @@
 
 Each step is the literal command that produced the number in WORKLOG.md / THESIS-CORE.md. Steps are idempotent where the
 underlying tools are (grids and candidates skip existing cases; trainings are NOT re-run if the run folder has 5 folds).
-GPU steps must run through ``grossauftrag --vram 20`` (the language model is stopped for them); ``--queue`` enqueues them
-instead of running. Private paths (mb-arena) stay on this machine.
+GPU steps must run through ``a GPU job queue`` (the language model is stopped for them); ``--queue`` enqueues them
+instead of running. Private paths (<private>) stay on this machine.
 
     python -m cmb.experiments.kern --list
     python -m cmb.experiments.kern --steps grid train-basis evaluate-basis csf --dry-run
@@ -13,8 +13,7 @@ instead of running. Private paths (mb-arena) stay on this machine.
 from __future__ import annotations
 import argparse, glob, os, subprocess, sys
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"; MB = "/home/uchralt/data/work/mb-arena"; EXT = "/home/uchralt/data/extern/momeni-csiro-cmb"
-PY = "/home/uchralt/miniconda3/envs/dl/bin/python"; GA = "/home/uchralt/local_agentic_system/system/werkzeuge/grossauftrag"
+from cmb.paths import ROOT, MB, MOMENI as EXT, PY, QUEUE as GA   # GA: GPU queue command (CMB_QUEUE), empty = run directly
 SYN = "dev/synthseg/{id}_synthseg.nii.gz"; MAN = "dev/manifest_valdo_gitter_d.json"
 T = "ergebnisse/turnier"
 
@@ -51,9 +50,9 @@ STEPS = [
   ("candidates-valdo", False, lambda: os.path.exists(f"{ROOT}/ergebnisse/stage2/a03-aniso-e60-gd-weich/patches.npy"),
    f"{PY} -m cmb.stage2.candidates --predictions {T}/a03-aniso-e60-gd --grid dev/gitter_d --keep-csf --out ergebnisse/stage2/a03-aniso-e60-gd-weich", "278 candidates at 0.15 / 1 mm3"),
   ("train-cat-t2s",   True,  lambda: len(glob.glob(f"{MB}/transfer/a03-aniso-e60-cat-t2s/fold*/meta.json")) == 5,
-   f"{PY} code/turnier.py --netz a03-aniso --epochen 60 --manifest {MB}/gitter/manifest_t2star.json --name cat-t2s --basis {MB}/transfer", "own training catalina-T2*: 0.663"),
+   f"{PY} code/turnier.py --netz a03-aniso --epochen 60 --manifest {MB}/gitter/manifest_t2star.json --name cat-t2s --basis {MB}/transfer", "own training inhouse-T2*: 0.663"),
   ("train-cat-swi",   True,  lambda: len(glob.glob(f"{MB}/transfer/a03-aniso-e60-cat-swi/fold*/meta.json")) == 5,
-   f"{PY} code/turnier.py --netz a03-aniso --epochen 60 --manifest {MB}/gitter/manifest_swi.json --name cat-swi --basis {MB}/transfer", "own training catalina-SWI: 0.626"),
+   f"{PY} code/turnier.py --netz a03-aniso --epochen 60 --manifest {MB}/gitter/manifest_swi.json --name cat-swi --basis {MB}/transfer", "own training inhouse-SWI: 0.626"),
   ("candidates-cat",  False, lambda: os.path.exists(f"{MB}/stage2/a03-aniso-e60-cat-swi-weich/patches.npy"),
    f'{PY} -m cmb.stage2.candidates --predictions {MB}/transfer/a03-aniso-e60-cat-t2s --manifest {MB}/gitter/manifest_t2star.json --synthseg "{MB}/synthseg-t2star/robust/{{sid}}_synthseg.nii.gz" --keep-csf --out {MB}/stage2/a03-aniso-e60-cat-t2s-weich && '
    f'{PY} -m cmb.stage2.candidates --predictions {MB}/transfer/a03-aniso-e60-cat-swi --manifest {MB}/gitter/manifest_swi.json --synthseg "{MB}/synthseg-swi/robust/{{sid}}_synthseg.nii.gz" --keep-csf --out {MB}/stage2/a03-aniso-e60-cat-swi-weich',
@@ -92,7 +91,7 @@ STEPS = [
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", nargs="*", default=[]); ap.add_argument("--all", action="store_true"); ap.add_argument("--list", action="store_true")
-    ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--queue", action="store_true", help="enqueue GPU steps with grossauftrag instead of running")
+    ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--queue", action="store_true", help="enqueue GPU steps with GPU job queue instead of running")
     ap.add_argument("--force", action="store_true", help="run even if the done-check says done")
     a = ap.parse_args()
     names = [s[0] for s in STEPS]
@@ -106,8 +105,8 @@ def main():
         gpu, done, cmd, what = next(s[1:] for s in STEPS if s[0] == n)
         if done() and not a.force:
             print(f"== {n}: done (skip; --force to repeat)"); continue
-        if gpu:
-            full = f"{GA} {'--einreihen ' if a.queue else ''}--vram 20 -- bash -c 'cd {ROOT} && {cmd}'"
+        if gpu and GA:   # paper version: without a queue command (CMB_QUEUE) GPU steps run directly
+            full = f"{GA}{'--einreihen ' if a.queue else ''}--vram 20 -- bash -c 'cd {ROOT} && {cmd}'"
         else:
             full = f"cd {ROOT} && {cmd}"
         print(f"== {n}: {what}\n   {full}", flush=True)

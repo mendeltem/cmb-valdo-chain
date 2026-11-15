@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""Ranking of the architecture tournament (Claude 18 Sep 2026).
+"""Rangliste des Architektur-Turniers (Claude 18.09.2026).
 
-Reads ergebnisse/turnier/<netz>/fold<k>/<id>_pred_meta.json (+ <id>_pred.nii.gz for the Dice)
-and writes ergebnisse/turnier/rangliste.json and rangliste.md. Sums only, no individual cases.
+Liest ergebnisse/turnier/<netz>/fold<k>/<id>_pred_meta.json (+ <id>_pred.nii.gz fuer den Dice)
+und schreibt ergebnisse/turnier/rangliste.json und rangliste.md. Nur Summen, keine Einzelfaelle.
 
-Per network:
-  F1 pooled over all 57 cases (metric.summarize, 26-connectivity components) -- the RANKING MEASURE.
-  Precision, sensitivity, FP per case, F1 per fold (spread!).
-  Dice: voxel Dice pooled over all cases (2*sum TP voxels / (sum ref + sum pred)) and
-        mean per case over the cases WITH a reference. For objects of only a few voxels
-        the Dice fluctuates strongly; it is a secondary measure.
-  Paired against the benchmark (a01-attunet): bootstrap over CASES (10,000 draws, the same
-        cases for both networks), delta of the pooled F1 with a 95% interval. If the
-        interval includes zero, the difference is not established -- with 57 cases and
-        fold F1 from 0.16 to 0.49 that is the normal case for small differences.
-Incomplete networks (fewer than 5 finished folds) appear in the list, but without a rank.
+Je Netz:
+  F1 gepoolt ueber alle 57 Faelle (metric.summarize, 26er-Komponenten) -- das RANGMASS.
+  Precision, Sensitivitaet, FP je Fall, F1 je Falte (Streuung!).
+  Dice: Voxel-Dice gepoolt ueber alle Faelle (2*Summe TP-Voxel / (Summe Ref + Summe Pred)) und
+        Mittel je Fall ueber die Faelle MIT Referenz. Bei Objekten von wenigen Voxeln schwankt
+        der Dice stark; er ist Nebenmass.
+  Gepaart gegen die Messlatte (a01-attunet): Bootstrap ueber FAELLE (10.000 Ziehungen, dieselben
+        Faelle fuer beide Netze), Delta des gepoolten F1 mit 95-%-Intervall. Schliesst das
+        Intervall die Null ein, ist der Unterschied nicht gesichert -- bei 57 Faellen mit
+        Falten-F1 von 0.16 bis 0.49 ist das der Normalfall fuer kleine Unterschiede.
+Unvollstaendige Netze (weniger als 5 fertige Falten) stehen in der Liste, aber ohne Rang.
 
-Usage:  python turnier_rangliste.py [--basis ergebnisse/turnier] [--messlatte a01-attunet] [--ohne-dice]
+Aufruf:  python turnier_rangliste.py [--basis ergebnisse/turnier] [--messlatte a01-attunet] [--ohne-dice]
 """
 import os, sys, json, glob, argparse
 import numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+ROOT = os.environ.get("CMB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, f"{ROOT}/code")
 from metric import summarize
 
@@ -39,7 +39,7 @@ def dice_fall(netz_dir, k, sid, gitter):
 
 
 def liquor_zeile(netz_dir, k, sid, gitter):
-    """CSF rule (protokoll.md 18 Sep): discard components whose majority label is CSF, then hits()."""
+    """Liquor-Regel (protokoll.md 18.09.): Komponenten mit Mehrheitslabel Liquor verwerfen, dann hits()."""
     import nibabel as nib
     from scipy import ndimage
     import gewebekarte as G
@@ -114,7 +114,7 @@ def main():
                 e.update(f1_liquor=round(sl_["f1"], 4), precision_liquor=round(sl_["precision"], 4),
                          sensitivitaet_liquor=round(sl_["sensitivity"], 4), fp_je_fall_liquor=round(sl_["fp_per_case"], 2))
         aus[n] = e
-    # paired against the benchmark
+    # gepaart gegen die Messlatte
     if a.messlatte in daten and daten[a.messlatte][0]:
         ref = daten[a.messlatte][0]
         for n, (rows, _) in daten.items():
@@ -146,7 +146,7 @@ def main():
         aus[n]["rang"] = i
     json.dump(dict(messlatte=a.messlatte, rang=rang, netze=aus), open(f"{a.basis}/rangliste.json", "w"),
               indent=1, ensure_ascii=False)
-    z = ["| Rank | Network | F1 | F1 +CSF | Prec | Sens | FP/case | Dice pooled | F1 per fold | Delta F1 vs benchmark [CI95] | Mio par. | h |",
+    z = ["| Rang | Netz | F1 | F1 +Liquor | Prec | Sens | FP/Fall | Dice gepoolt | F1 je Falte | Delta F1 gegen Messlatte [KI95] | Mio Par. | h |",
          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for n in rang + [m for m in aus if m not in rang]:
         e = aus[n]; g = e.get("gegen_messlatte")

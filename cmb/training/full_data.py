@@ -1,7 +1,7 @@
 """Train the anisotropic U-Net on ALL cases of one or more manifests -- no folds, no inner validation -- and predict with it.
 
 Why this exists (user request 2026-10-07): the deliverable models of the product package
-(``microbleed_detection_3D_UNET``, ``mb_segment -m valdo_t2 | charite_t2 | charite_swi``) must see every
+(``microbleed_detection_3D_UNET``, ``mb_segment -m valdo_t2 | inhouse_t2 | inhouse_swi``) must see every
 annotated case, not four fifths of them. The cross-validation runs (``code/turnier.py``) keep one fold for the
 score and one for the checkpoint; here nothing is held back, so there is no checkpoint selection either:
 the state after the LAST epoch of the fixed 60-epoch cosine schedule is kept. That choice was measured on the
@@ -32,7 +32,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 sys.path.insert(0, f"{ROOT}/code")
 import cv5      # noqa: E402
 import turnier  # noqa: E402  -- registers the networks and the deep-supervision loss in cv5
@@ -53,8 +53,16 @@ def train(a) -> None:
     recs = load_manifests(a.manifest)
     train_ids = sorted(recs)
     P = cv5.konf_params(a.net)
+    if a.loss:          # WMH 2026-10-11: a12-anisozentrum needs the centre loss, as in the CV run (turnier.py --verlust zentrum)
+        P["loss"] = a.loss
+    if a.channels:      # WMH 2026-10-11: FLAIR-only deliverable ("t2s" = one channel), default keeps the recipe
+        P["kanaele"] = a.channels
     if a.patches:
         P["n_patches"] = a.patches
+    if getattr(a, "lr", None):      # paper version (cmb train -ilr): default None keeps the recipe's 3e-4
+        P["lr"] = a.lr
+    if getattr(a, "bs", None):      # paper version (cmb train -bs): default None keeps the recipe's 4
+        P["bs"] = a.bs
     out = absolute(a.out)
     os.makedirs(out, exist_ok=True)
     if os.path.exists(f"{out}/meta.json") and json.load(open(f"{out}/meta.json")).get("ok") and not a.force:
@@ -149,7 +157,11 @@ def main() -> None:
     t.add_argument("--seed", type=int, default=42)
     t.add_argument("--net", default="a03-aniso")
     t.add_argument("--epochs", type=int, default=60)
+    t.add_argument("--loss", default=None, help="loss name in cv5.VERLUSTE (default: the net's recipe; 'zentrum' for a12-anisozentrum)")
+    t.add_argument("--channels", default=None, choices=["t2s_frst", "t2s"], help="input channels (default: recipe, t2s_frst)")
     t.add_argument("--patches", type=int, default=None, help="patches per epoch (recipe: 800); small values only for smoke tests")
+    t.add_argument("--lr", type=float, default=None, help="learning rate (default: recipe, 3e-4)")
+    t.add_argument("--bs", type=int, default=None, help="batch size (default: recipe, 4)")
     t.add_argument("--force", action="store_true")
     p = sub.add_parser("predict")
     p.add_argument("--models", nargs="+", required=True, help="modell.pt files; meta.json must sit next to each")

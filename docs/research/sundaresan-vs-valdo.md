@@ -38,4 +38,4 @@ vessel removal, or distillation.
 | Rotation/scaling can destroy CMB | both warn | matches our negative augmentation result (-0.06) |
 | Vessel removal can remove CMB | Sundaresan names it itself as a limitation | measured by us: 109 of 236 hit |
 | Location of CMB per MARS with public atlas | Sundaresan 2025 | better than my SynthSeg approximation, which cannot separate deep white matter |
-| Thresholds empirical per dataset | Sundaresan | in our work via the inner fold -- redetermine for catalina, do not carry over |
+| Thresholds empirical per dataset | Sundaresan | in our work via the inner fold -- redetermine for inhouse, do not carry over |

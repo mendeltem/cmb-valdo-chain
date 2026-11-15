@@ -18,7 +18,7 @@ import nibabel as nib
 import numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 
 
 def main() -> None:

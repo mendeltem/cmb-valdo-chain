@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cmb-valdo-chain"
+version = "3.0.0"
+description = "Cerebral microbleed detection on T2*-weighted MRI: the code of the clinical CMB paper (manuscript v3)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "mendeltem"}]
+# pinned in env/requirements.txt (the versions the paper ran with); install.sh installs that file
+dependencies = ["numpy", "scipy", "nibabel", "scikit-image", "scikit-learn", "pillow", "simpleitk", "tqdm", "torch"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+cmb = "cmb.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cmb*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

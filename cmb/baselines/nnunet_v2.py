@@ -8,15 +8,15 @@ Trainer nnUNetTrainer_250epochs (the default is 1000; 250 for budget reasons -- 
 + CSF rule via cmb.analysis.operating_point.
 
     python -m cmb.baselines.nnunet_v2 prepare          # dataset + plan_and_preprocess + splits (CPU)
-    python -m cmb.baselines.nnunet_v2 train --fold k   # GPU (queue with grossauftrag --vram 20); trains and predicts the fold
+    python -m cmb.baselines.nnunet_v2 train --fold k   # GPU (queue with a GPU job queue); trains and predicts the fold
     python -m cmb.baselines.nnunet_v2 score
 """
 from __future__ import annotations
 import argparse, glob, json, os, shutil, subprocess, time
 import nibabel as nib, numpy as np
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"; EXTERN = "/home/uchralt/data/extern/valdo2021/Task2"
-NN = "/home/uchralt/data/work/nnunet"; BIN = "/home/uchralt/miniconda3/envs/dl/bin"
+from cmb.paths import ROOT, VALDO as EXTERN, PYBIN as BIN
+NN = os.environ.get("CMB_NNUNET", os.path.join(ROOT, "nnunet"))   # nnU-Net raw/preprocessed/results base
 DS_ID, DS = 501, "Dataset501_VALDOCMB"; CONFIG, TRAINER = "3d_fullres", "nnUNetTrainer_250epochs"
 ENV = dict(os.environ, nnUNet_raw=f"{NN}/raw", nnUNet_preprocessed=f"{NN}/preprocessed", nnUNet_results=f"{NN}/results", nnUNet_n_proc_DA="6")
 
@@ -39,7 +39,7 @@ def prepare(a):
         lab = nib.load(f"{EXTERN}/{cid}/{cid}_space-T2S_CMB.nii.gz")
         nib.save(nib.Nifti1Image((np.asarray(lab.dataobj) > 0).astype(np.uint8), lab.affine), f"{raw}/labelsTr/{cid}.nii.gz")
     json.dump({"channel_names": {"0": "T2star"}, "labels": {"background": 0, "cmb": 1}, "numTraining": len(cases()), "file_ending": ".nii.gz",
-               "name": DS, "description": "VALDO Task 2, 57 CV cases, masked T2S native, CMB labels; folds from valdo-t2s dev/cases.json"},
+               "name": DS, "description": "VALDO Task 2, 57 CV cases, masked T2S native, CMB labels; folds from dev/cases.json"},
               open(f"{raw}/dataset.json", "w"), indent=1)
     r = subprocess.run([f"{BIN}/nnUNetv2_plan_and_preprocess", "-d", str(DS_ID), "--verify_dataset_integrity", "-c", CONFIG, "-np", "6"], env=ENV)
     if r.returncode != 0:

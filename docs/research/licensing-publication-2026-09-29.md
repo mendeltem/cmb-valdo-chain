@@ -17,5 +17,5 @@
 2. QC page with VALDO excerpts: non-commercial + source attribution visible -> same logic as the data itself (the repo valdo-cmb-qc already exists).
 3. Momeni excerpts: static only (PNG/PDF), with source, no revenue; do NOT publish the slice viewer with Momeni images
    (the voxel data sits in it as a JPEG stack -- that is close to "editable"). The numbers (F1 etc.) are unproblematic.
-4. catalina: never, not even as an excerpt (patient data, own rule).
+4. inhouse: never, not even as an excerpt (patient data, own rule).
 5. Before publication: carry VALDO's citation obligations (funder acknowledgement) over into the README and the paper.

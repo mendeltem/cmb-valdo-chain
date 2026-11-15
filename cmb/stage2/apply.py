@@ -1,7 +1,7 @@
-"""Apply the VALDO-only second stage to the candidates of ANOTHER cohort (deployment mode; WORKLOG.md 5ae arm 4, 2026-09-29).
+"""Apply the VALDO-only second stage to the candidates of ANOTHER cohort (deployment mode; ARBEIT.md 5ae arm 4, 2026-09-29).
 
 The pooled classifier (cmb.stage2.pooled) needs the private candidates at training time. Arm 4 showed that a classifier
-trained on VALDO candidates alone transfers zero-shot (catalina-SWI 0.671 vs 0.672 pooled). This is the tool that does
+trained on VALDO candidates alone transfers zero-shot (inhouse-SWI 0.671 vs 0.672 pooled). This is the tool that does
 exactly that outside a cross-validation: the CNN (cmb.stage2.classifier.fit_predict_cnn_transfer, no fine-tuning) is trained
 on ALL VALDO candidates, its acceptance threshold is chosen on VALDO's own inner folds (out-of-fold scores of the VALDO
 candidates), and both are applied unchanged to the target candidates. Three seeds x three members are averaged.
@@ -17,7 +17,7 @@ import numpy as np
 from cmb.stage2.classifier import fit_predict_cnn_transfer, THRESHOLDS
 from cmb.stage2.pooled import scores_of, best_threshold
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 
 
 def load(folder):

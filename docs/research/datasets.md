@@ -33,11 +33,11 @@ NOT checked. Nothing downloaded.
 Freely and immediately usable are only AIBL (75 SWI / 175 CMB) and Dou (20 SWI) -- both SWI, both presumably point
 rather than mask annotation. For a T2* model they are suitable as additional pretraining and as an external test
 cohort, not as a replacement. The bigger lever is SHIVA-CMB: a freely available model trained on 450 scans of both
-sequences -- as a benchmark on VALDO and catalina (how good is "off the shelf"?) and as a possible starting point for
+sequences -- as a benchmark on VALDO and inhouse (how good is "off the shelf"?) and as a possible starting point for
 fine-tuning.
 
 ## Addendum 19 Sep evening: SHIVA-CMB measured
 Licence read (CC BY-NC-SA 4.0), weights v2 loaded (SHA-256 matches). On our 57 VALDO CV cases F1 0.575 /
 median 0.667 -- BUT according to the paper (https://pmc.ncbi.nlm.nih.gov/articles/PMC11680838/) SHIVA was trained on
-60 of the 72 public VALDO cases (plus DOU 17, AIBL 44 real + 60 synthetic, BBS 269). Only catalina is fair.
+60 of the 72 public VALDO cases (plus DOU 17, AIBL 44 real + 60 synthetic, BBS 269). Only inhouse is fair.
 The same paper also shows: the free datasets DOU and AIBL are usable as training data (used that way there).

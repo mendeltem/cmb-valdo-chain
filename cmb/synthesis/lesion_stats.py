@@ -11,7 +11,7 @@ import argparse, json, os
 import nibabel as nib, numpy as np
 from scipy import ndimage
 
-ROOT = "/home/uchralt/data/work/valdo-t2s"
+from cmb.paths import ROOT
 CLASSES = {}
 for l in (4, 5, 14, 15, 24, 43, 44): CLASSES[l] = 1
 for l in (3, 42, 17, 18, 53, 54): CLASSES[l] = 2

@@ -69,7 +69,7 @@ nnDetection, Retina U-Net, test-time augmentation (second stage and inference); 
 | Source | Link | What it's for in our work | Status |
 |---|---|---|---|
 | He L, Zhang H, Li K, Saccoh AF, Ingala S, Rehwald R, de Bruijne M, Barkhof F, Davies R, Sudre CH, "CenSynCMB: Centre Maps and Physics-Guided Synthesis for Microbleed Detection", arXiv 2026-07-06 | https://arxiv.org/abs/2607.05325 | new benchmark on VALDO Task 2 (74.3); centre map (5k), reweighting by missed lesions (5l), synthesis; their evaluation protocol in `cmb/analysis/subject_level_f1.py` | Q |
-| Tsuchida A et al., SHIVA-CMB, Scientific Reports 2024 | https://www.nature.com/articles/s41598-024-81870-5 ; https://pmc.ncbi.nlm.nih.gov/articles/PMC11680838/ ; code https://github.com/pboutinaud/SHIVA_CMB | external benchmark (5a); trained on 60 of the 72 VALDO cases -> fair only on catalina | Q |
+| Tsuchida A et al., SHIVA-CMB, Scientific Reports 2024 | https://www.nature.com/articles/s41598-024-81870-5 ; https://pmc.ncbi.nlm.nih.gov/articles/PMC11680838/ ; code https://github.com/pboutinaud/SHIVA_CMB | external benchmark (5a); trained on 60 of the 72 VALDO cases -> fair only on inhouse | Q |
 | "A geometric-to-neural cascade for cerebral microbleed detection in susceptibility-weighted MRI", 2026 | https://pmc.ncbi.nlm.nih.gov/articles/PMC13483767/ | two lightweight classifiers in series, removes 76.8% of false positives (motivation for the second stage) | Q (reading model) |
 | Liu S et al., "Cerebral microbleed detection using Susceptibility Weighted Imaging and deep learning", NeuroImage 198:271-282, 2019 | https://pubmed.ncbi.nlm.nih.gov/31121296/ | 3D FRST candidates + ResNet with phase image (we have no phase) | R |
 | Al-masni MA et al., two-stage YOLO + 3D-CNN, 2020 | https://pubmed.ncbi.nlm.nih.gov/33018167/ ; https://www.sciencedirect.com/science/article/pii/S2213158220303016 ; code https://github.com/Yonsei-MILab/Cerebral-Microbleeds-Detection | two-stage comparison work | R |
@@ -96,7 +96,7 @@ nnDetection, Retina U-Net, test-time augmentation (second stage and inference); 
 | Source | Link | What it's for in our work | Status |
 |---|---|---|---|
 | Billot B et al., "SynthSeg", Medical Image Analysis 2023; robust variant: Billot B et al., PNAS 2023 | https://arxiv.org/abs/2107.09559 | tissue map: CSF rule (4.3), location of errors (5i), tissue feature of the second stage (5j), `--robust` directly on T2* / SWI | G |
-| Isensee F et al., "HD-BET", Human Brain Mapping 40:4952-4964, 2019 | -- | brain masks catalina (4.2, 5n: tight compared to the loose VALDO masks) | G |
+| Isensee F et al., "HD-BET", Human Brain Mapping 40:4952-4964, 2019 | -- | brain masks inhouse (4.2, 5n: tight compared to the loose VALDO masks) | G |
 | Zhang Y, Brady M, Smith S, FSL FAST, IEEE TMI 20:45-57, 2001; Jenkinson M et al., "FSL", NeuroImage 2012 | -- | bias correction `fast -B` (4.9: without -0.022) | G |
 | Fischl B, "FreeSurfer", NeuroImage 2012 | -- | runtime environment of SynthSeg (FreeSurfer 8.2.0) | G |
 

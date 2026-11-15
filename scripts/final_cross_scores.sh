@@ -1,9 +1,9 @@
 #!/bin/bash
 # Complete scoring of the cross tests: CSF rule (SynthSeg pattern with {sid} for the in-house cohorts) and the product's stage 2.
-R=/home/uchralt/data/work/valdo-t2s; MB=/home/uchralt/data/work/mb-arena; P=/home/uchralt/miniconda3/envs/dl/bin/python; F=$R/ergebnisse/final; cd $R
+R=<repo>; MB=<private>; P=python; F=$R/ergebnisse/final; cd $R
 VALDO=dev/manifest_valdo_all72.json; T2S=$MB/gitter/manifest_t2star.json; SWI=$MB/gitter/manifest_swi.json
-declare -A MAN=([valdo_t2-on-charite_t2]=$T2S [valdo_t2-on-charite_swi]=$SWI [charite_t2-on-valdo]=$VALDO [charite_swi-on-valdo]=$VALDO [valdo_t2-on-valdo]=$VALDO [charite_t2-on-charite_t2]=$T2S [charite_swi-on-charite_swi]=$SWI)
-declare -A SYN=([valdo_t2-on-charite_t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz" [valdo_t2-on-charite_swi]="$MB/synthseg-swi/robust/{sid}_synthseg.nii.gz" [charite_t2-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [charite_swi-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [valdo_t2-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [charite_t2-on-charite_t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz" [charite_swi-on-charite_swi]="$MB/synthseg-swi/robust/{sid}_synthseg.nii.gz")
+declare -A MAN=([valdo_t2-on-inhouse_t2]=$T2S [valdo_t2-on-inhouse_swi]=$SWI [inhouse_t2-on-valdo]=$VALDO [inhouse_swi-on-valdo]=$VALDO [valdo_t2-on-valdo]=$VALDO [inhouse_t2-on-inhouse_t2]=$T2S [inhouse_swi-on-inhouse_swi]=$SWI)
+declare -A SYN=([valdo_t2-on-inhouse_t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz" [valdo_t2-on-inhouse_swi]="$MB/synthseg-swi/robust/{sid}_synthseg.nii.gz" [inhouse_t2-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [inhouse_swi-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [valdo_t2-on-valdo]="dev/synthseg/{id}_synthseg.nii.gz" [inhouse_t2-on-inhouse_t2]="$MB/synthseg-t2star/robust/{sid}_synthseg.nii.gz" [inhouse_swi-on-inhouse_swi]="$MB/synthseg-swi/robust/{sid}_synthseg.nii.gz")
 for n in "${!MAN[@]}"; do
   echo "### score $n"
   $P -m cmb.transfer.evaluate --run $n=$F/cross/$n --manifest ${MAN[$n]} 2>&1 | tail -1
@@ -23,7 +23,7 @@ nets=[]
 for sd in b['members']:
     n=build_net(nn); n.load_state_dict(sd); nets.append(n.eval().to(dev))
 out={}
-for name in ['valdo_t2-on-charite_t2','valdo_t2-on-charite_swi','charite_t2-on-valdo','charite_swi-on-valdo','valdo_t2-on-valdo','charite_t2-on-charite_t2','charite_swi-on-charite_swi']:
+for name in ['valdo_t2-on-inhouse_t2','valdo_t2-on-inhouse_swi','inhouse_t2-on-valdo','inhouse_swi-on-valdo','valdo_t2-on-valdo','inhouse_t2-on-inhouse_t2','inhouse_swi-on-inhouse_swi']:
     info, patches, rows, y, fold, n_ref, n_cases = load(f'ergebnisse/final/stage2/{name}')
     z0,y0,x0=((s-c)//2 for s,c in zip(patches.shape[-3:],CROP))
     x=torch.from_numpy(np.ascontiguousarray(patches[..., z0:z0+CROP[0], y0:y0+CROP[1], x0:x0+CROP[2]], dtype=np.float32))

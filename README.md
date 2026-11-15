@@ -1,75 +1,250 @@
-# cmb-valdo-chain: cerebral microbleed detection on T2*/SWI, built from MicrobleedNet by paired ablation
+# cmb-valdo-chain: the code of the clinical CMB paper (two-stage microbleed detector, VALDO-trained)
 
-A 3D U-Net detector plus a cross-cohort 3D-CNN candidate classifier for cerebral microbleeds (CMB). It grew out of a
-re-implementation of MicrobleedNet on VALDO Task 2 in which every building block was swapped against a paired measurement.
-Lesion-level F1 on VALDO 0.245 -> 0.647; in-house clinical cohorts (T2*, SWI) 0.67; an external public SWI cohort without any
-adaptation 0.61-0.65. All numbers, decision rules and negative findings: `docs/WORKLOG.md` (the working document),
-`docs/OVERVIEW-tests-2026-09-29.md` (every test), `docs/THESIS-CORE.md` (the core for the thesis), `docs/REPLICATION.md`
-(the literal command behind every number).
+## Quick start
 
-**Traceability.** `docs/TRACEABILITY.md` is the map: every number in the results table traced to its data, the command
-that produced it, the result file and the lab-book section; every building block of the chain traced to its source
-(paper, original code or own measurement) and to the file that implements it; every data set to its origin and licence.
-The bibliography `docs/LITERATURE.md` flags each entry as checked at the source (Q), taken from a research note (R) or
-cited from memory (G).
+```bash
+git clone https://github.com/mendeltem/cmb-valdo-chain.git && cd cmb-valdo-chain && ./install.sh && source env.sh
+cmb predict -i scan.nii.gz                 # one T2*-GRE scan -> scan_cmb/ (mask, probability map, one CSV row per microbleed)
+cmb predict -i scans/                      # every .nii/.nii.gz in a folder -> scans_cmb/
+```
 
-## What is in here
-| Folder | Content |
+The public model is the VALDO T2* U-Net (T2\*-GRE only; it prints `model: VALDO T2* (T2*-GRE scans only)`). SWI or other
+sequences need local fine-tuning first (`cmb fine_tune`, below), then `cmb predict -i scan.nii.gz -m <your model folder>`.
+Research software, not a medical device.
+
+## What this repository is
+
+**Tag [`paper-v3-2026-11`](https://github.com/mendeltem/cmb-valdo-chain/releases/tag/paper-v3-2026-11) is the code that
+produced all results of the clinical CMB paper (manuscript v3)**: the research package `cmb/`, the training and grid code
+`code/` and the job scripts of every paper phase in `scripts/paper/`. `PAPER_VERSION.md` lists every change against the
+code as it ran (paths and names only, for portability and privacy) and how the weights were checked.
+
+| folder | content |
 |---|---|
-| `cmb/` | the English package: `transfer/` (grids, manifests, zero-shot, evaluation), `stage2/` (candidates, pooled classifier, apply mode), `analysis/` (operating point, ensembles, subject-level F1, candidate shape features, volumes), `review/` (QC pages, slice viewer), `synthesis/`, `baselines/` (MicrobleedNet fine-tune, nnU-Net v2), `experiments/kern.py` (the repeatable core runner) |
-| `code/` | training and grid building (grown during the study; identifiers and flags keep their original German names, see the glossary below): `turnier.py` (all training switches), `cv5.py` (5-fold CV core), `netze.py` (architectures, winner `a03-aniso`), `frst.py`, `gitter_c_bauen.py` (0.5×0.5×1 mm grid), `preprocess.py` / `preproc_roh_bauen.py` (VALDO preprocessing), `split.py`, `we5.py --synthseg` (SynthSeg maps), `metric.py` |
-| `catalina/` | scripts for an in-house BIDS cohort: `hirn_und_bias.py` (HD-BET + FSL FAST -B once, written to `derivatives/`), `synthseg_swi.sh`, `mb_metrik.py`. No data, no identifiers. |
-| `dev/` | VALDO case list with the fixed 5-fold split (`cases.json`, `split.json`, seed 0), manifests, intensity landmarks |
-| `docs/` | `TRACEABILITY.md` (the map), `WORKLOG.md` (lab book), `REPLICATION.md` (commands), `OVERVIEW-tests-2026-09-29.md`, `THESIS-CORE.md`, `LITERATURE.md`, `DEVIATIONS-microbleednet.md`, `research/` (notes), frozen environment (`environment/`), VALDO licence |
-| `env/` | `requirements.txt` (runtime, pinned), `requirements-optional.txt` (baselines), `requirements-full-record.txt` (full freeze of the original machine, record only), `environment-from-history.yml` (conda) |
-| `scripts/` | `link_paths.sh` (directory tree) |
+| `cmb/` | the package: `stage2/` (candidates, pooled/joint and separate classifiers, TrackSet, LODO), `analysis/`, `transfer/` (grids, evaluation), `training/full_data.py`, `baselines/`, `review/`, `synthesis/`, `maskfix/`; the command line and Python API (`cli.py`, `commands.py`, `api.py`, `predict_cli.py`, `pretrained.py`), `paths.py`, `envfile.py` |
+| `code/` | stage 1 as it ran: `turnier.py` (training runner and CV), `cv5.py` (patch sampling, sliding-window inference), `netze.py` (winner `a03-aniso`), `gitter_c_bauen.py` (0.5 x 0.5 x 1 mm grid + FRST), `frst.py`, `preprocess.py`, `metric.py` (German identifiers, glossary below) |
+| `scripts/paper/` | the job scripts per paper phase (table below; every script mapped to its job and manuscript item in `scripts/paper/README.md`) |
+| `scripts/prep_bids/` | brain mask + bias correction + SynthSeg for BIDS cohorts |
+| `dev/` | VALDO case list, the frozen 5-fold split (`folds_frozen/valdo.json` + sha256), manifests, landmarks |
+| `docs/` | thesis-phase lab book (`WORKLOG.md`), replication commands, traceability, literature |
+| `tests/` | the test suite (synthetic phantoms on the CPU; VALDO tests when VALDO is present) |
+
+**This is the paper repository; [cmb_3d_unet_experiments](https://github.com/mendeltem/cmb_3d_unet_experiments) (`cmbx`) is
+the experiments repository**: a clean reimplementation of the stage-1 U-Net with fine-tuning, written for new experiments.
+This repository is the code that ran for the paper, kept as it was, and hosts the paper's VALDO-trained weights as assets
+of its own release. The command names and option letters are the same in both (`-i` input, `-l` labels,
+`-m` model, `-o` output, `-ep`, `-ilr`, `-bs`, following MicrobleedNet).
+
+### The paper phases and their scripts
+
+| phase | what | jobs | scripts |
+|---|---|---|---|
+| Phase 1, arena | ranking of stage-1 U-Nets and stage-2 classifiers; one classifier per cohort vs one for all (separate vs joint) | wc3-wc7, wk0 (U-Net re-rank), wk1/wk1b (external models), wk2/wk2b (pooling factorial), wk9 (Arena 1 v2: selection on VALDO only) | `scripts/paper/phase1_arena/`, `code/turnier.py`, `cmb.stage2.pooled`, `cmb.stage2.trackset` |
+| Phase 2, fine-tuning | how many annotated local scans: from scratch (S), full fine-tuning (FT), norm/output-layer only (FTn), threshold recalibration only (CAL), the frozen VALDO-only classifier (frozen-V) | wk0b, wk4b | `scripts/paper/phase2_finetune/` (`phase4_draws.py`, `run_block.py`, `calibrate_n0.py`, `chain_frozenV.py`, `primary_endpoint.py`) |
+| Phase 3, cohorts | leave-one-site-out, site-count curve, patient-level counts, treatment threshold, MARS location | wk3, wk5, wk5b | `cmb.stage2.lodo*`, `scripts/paper/phase3_cohorts/` |
+| manuscript v3 | all folds, one threshold set, size classes, grey zone, prevalence, number check | wk11a-f | `scripts/paper/manuscript_v3/` |
 
 ## Install
-Tested on 7 October 2026 with a fresh clone and a fresh conda environment (`docs/INSTALL-TEST.md` has the log):
+
 ```bash
 git clone https://github.com/mendeltem/cmb-valdo-chain.git && cd cmb-valdo-chain
-conda create -n cmb python=3.12 -y && conda activate cmb
-pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124   # GPU (CUDA 12.4); CPU only: .../whl/cpu
-pip install -r env/requirements.txt                                            # numpy, scipy, nibabel, scikit-image/-learn, monai, SimpleITK, pillow
-python pipeline/00_selftest.py                                                 # no data, CPU, < 1 min; must end with SELFTEST OK
-bash scripts/link_paths.sh                                                     # the directory tree the scripts expect (see Paths)
+./install.sh                       # conda env "cmb-valdo-chain" (or a venv), PyTorch for this machine, env/requirements.txt, cmb selftest
+source env.sh                      # in every new shell
 ```
-Optional, only for the baselines: `pip install -r env/requirements-optional.txt` (nnU-Net v2, TensorFlow for SHIVA-CMB) and
-`pip install -e /path/to/microbleed-detection` (the original MicrobleedNet, github.com/v-sundaresan/microbleed-detection, commit 958f1cb;
-used by `cmb/baselines/microbleednet_finetune.py` and for the FRST comparison in `code/frst.py`).
-`env/requirements-full-record.txt` is the complete `pip freeze` of the original machine, kept as a record; it is not meant to be installed.
-External tools (only for the FIRST preprocessing of a cohort): FSL 6 (`fast -B`), HD-BET (env `medizin`), FreeSurfer 8.2 (`mri_synthseg`). Frozen versions: `docs/environment/`.
 
-## Paths (read this)
-The code was written on one machine and uses absolute paths: `ROOT = /home/uchralt/data/work/valdo-t2s` (this repo), `MB = /home/uchralt/data/work/mb-arena`
-(private cohort work dir), `EXTERN = /home/uchralt/data/extern/valdo2021/Task2` (VALDO), `~/data/bids/catalina-*` (in-house BIDS).
-`scripts/link_paths.sh` creates that tree with symlinks; on another account replace `/home/uchralt` in `cmb/*/*.py` and `code/*.py`
-(`grep -rl '/home/uchralt' cmb code catalina`). Moving the constants into one config is on the to-do list.
+- `./install.sh --torch cpu` installs the smaller CPU build; `--name NAME` another environment name; `--dry-run` shows the plan.
+- The installer downloads the VALDO T2* model to `~/.cache/cmb-valdo-chain/` (`--no-model` skips it; `CMB_MODEL_CACHE` moves it).
+- External tools are optional: FSL (`fast`, bias correction as in the paper; without it SimpleITK N4 with a warning), HD-BET
+  (brain mask of scans that are not skull-stripped), FreeSurfer 8.2 `mri_synthseg` (only for `--csf-rule`).
 
-## Data
-**VALDO Task 2** (public, CC BY-NC-SA 4.0): download from https://zenodo.org/records/4520773, unpack to `~/data/extern/valdo2021/Task2/sub-XXX/`
-(`*_space-T2S_desc-masked_T2S.nii.gz`, `*_space-T2S_CMB.nii.gz`, T1/T2). Not redistributed here. 72 cases; 15 are held out
-(`dev/split.json`, touched once, see WORKLOG.md 5ad) and 57 are the CV cases.
-
-**In-house cohort (catalina, never public)**: BIDS with `sub-XXX/anat/sub-XXX_T2starw.nii.gz` (or `_acq-swi_T2starw`), and derivatives:
+```bash
+cmb selftest
 ```
-derivatives/brainmask/sub-XXX/anat/sub-XXX_T2starw_desc-brain_mask.nii.gz      HD-BET (or the scanner's mask)
-derivatives/biascorr/sub-XXX/anat/sub-XXX_T2starw_desc-biascorr_T2starw.nii.gz FSL FAST -B on the brain-extracted image
-derivatives/manual-cmb/sub-XXX/anat/sub-XXX_..._CMB.nii.gz                      reference masks
+
+## Data and paths
+
+VALDO 2021 Task 2 (public, CC BY-NC-SA 4.0, https://zenodo.org/records/4520773) is not redistributed. Link your copy once:
+
+```bash
+CMB_VALDO=${CMB_VALDO:-data/valdo2021/Task2} bash scripts/link_paths.sh
 ```
-`catalina/hirn_und_bias.py <swi|t2star>` writes the first two ONCE and skips cases that already have them — HD-BET and bias correction
-are never repeated. A case list `faelle.json` (id, fold, image, mask, brain, label paths) drives everything downstream.
 
-## Quality control of the VALDO result
-Slice viewer, public: **https://mendeltem.github.io/valdo-cmb-qc/slices/** (two axial images per patient, reference left, model outlines
-right, scroll = z, volumes in ml; built by `pipeline/11_qc_viewer.py`). Overview page with per-patient F1 and the pipeline diagram:
-https://mendeltem.github.io/valdo-cmb-qc/ . VALDO images only (CC BY-NC-SA 4.0); in-house cohorts are never published.
+All locations are environment variables (`python -m cmb.paths` / `cmb paths` prints them; table in `cmb/paths.py`):
+`CMB_ROOT` (results and `dev/`, default the repository), `CMB_PRIVATE` (your own cohorts, default `private/`, ignored by
+git), `CMB_VALDO`, `CMB_CASES`, `CMB_INHOUSE_LABEL`, `CMB_TWINS`, `CMB_QUEUE`. Run commands from the repository root.
 
-The viewer (`cmb/review/build_slice_viewer.py`) shows two large axial images per case (reference left, model outlines right),
-the lesion F1 per case in the list and the header, the mean and pooled F1 per model at the top of the list; arrow keys
-left/right change the case, up/down the slice. For editing the page while looking at it, `python -m cmb.review.live_server OUT_DIR`
-serves one or several viewer folders on 127.0.0.1 only, rebuilds the page whenever the generator changes and the page reloads
-itself (`--refresh-html` keeps data and images).
+## Predict
+
+```bash
+cmb predict -i data/valdo2021/Task2/sub-101/sub-101_space-T2S_desc-masked_T2S.nii.gz -o runs/pred_valdo
+```
+
+What `cmb predict` does, each step skipped when you pass its result: brain mask (`--brain-mask`; image > 0 for a
+skull-stripped scan; else HD-BET; else a rough intensity mask with a warning) -> bias correction (FSL FAST -B as in the
+paper; `--no-bias-correction`) -> inversion `1 - I/max` -> the 0.5 x 0.5 x 1 mm grid -> FRST (`--frst FILE` to use your
+own, with a warning) -> the VALDO-72 U-Net (two seeds averaged) -> the paper's fixed cell (probability > 0.3, components
+>= 2 mm3 and <= 2100 voxels) -> optional `--csf-rule` (SynthSeg) -> back to the scan grid.
+
+| output in `-o` | content |
+|---|---|
+| `<name>_cmb_mask.nii.gz` | labelled microbleeds 1..n on the scan grid |
+| `<name>_cmb_prob.nii.gz` | stage-1 probability 0..1 on the scan grid |
+| `<name>_cmb.csv` | one row per microbleed: id, centre (voxel and mm), volume (mm3), diameter, size class, stage-1 probability |
+
+Diameter = diameter of the circle with the area of the largest axial cross-section of the component on the 0.5 mm grid;
+size classes < 2 mm, 2-5 mm, > 5 mm (the paper's Table 2 definition). Stage 2 is not run: no classifier trained on
+public data alone exists as a file (`PAPER_VERSION.md`); the result is the paper's stage-1 chain with the fixed cell
+(the n = 0 arm). The same stage-1 recipe reached lesion F1 0.647 in VALDO cross-validation (two seeds + CSF rule).
+
+## Train, fine-tune, evaluate, cross-validate
+
+Synthetic phantoms show the commands (`-ep 1 --patches 8` = a quick try on the CPU; leave them out for the paper recipe):
+
+```bash
+python -m cmb.synthetic runs/phantoms --n 6
+cmb preprocess -i runs/phantoms/raw -ir _T2starw -f True -b runs/phantoms/raw -br _brainmask -l runs/phantoms/raw -lr _cmb -o runs/grid -fold 2
+```
+
+```bash
+cmb train -i runs/grid -l runs/grid -m runs/my_model -ep 1 --patches 8 --seeds 42
+cmb evaluate -i runs/grid -m runs/my_model -o runs/pred
+```
+
+```bash
+cmb fine_tune -i runs/grid -l runs/grid -m runs/my_model -o runs/ft -ep 1 --patches 8
+cmb fine_tune -i runs/grid -l runs/grid -m runs/my_model -o runs/ftn --ft_layers norm_out -ep 1 --patches 8
+cmb fine_tune -i runs/grid -l runs/grid -m runs/my_model -o runs/cal --calibrate_only True
+cmb predict -i runs/phantoms/raw/syn-001_T2starw.nii.gz -o runs/pred_ft -m runs/ft --no-bias-correction
+```
+
+```bash
+cmb cross_validate -i runs/grid -l runs/grid -o runs/cv -fold 5 -ep 1 --patches 8
+```
+
+`cross_validate` runs the paper's CV code (`code/turnier.py`: 5 folds, checkpoint chosen on the inner fold k+1, out-of-fold
+maps) and scores the fixed cell; `--stage2 joint` (or `separate`) then trains the TrackSet classifier on the out-of-fold
+candidates (a 1-epoch model proposes none, so the quick try above leaves it out; `tests/test_workflow.py` runs it).
+`-m pre` in `fine_tune` and `evaluate` is the public VALDO T2* model. A fine-tuned or calibrated folder works with
+`cmb predict -m` and `cmb evaluate -m`.
+
+| command / option | paper default | cmbx default | meaning |
+|---|---|---|---|
+| `preprocess -f True` | | same | scans already skull-stripped and bias-corrected (no FSL) |
+| `preprocess -fold` | 5 | 5 | folds written into `manifest.json` (stratified by CMB count) |
+| `train -ep / -ilr / -bs` | 60 / 3e-4 / 4 | 60 / 3e-4 / 4 | epochs, learning rate, batch size (recipe of `code/cv5.py`) |
+| `train --seeds` | 42 1 | (one model) | one member per seed; predictions average the members |
+| `train --frst` | True | True | FRST as the second input channel |
+| `fine_tune -ep / -ilr` | 30 / 1e-4 | 60 / 1e-4 | Phase 2 FT: half the epochs, lr 1e-4, weight decay 1e-4, state after the last epoch |
+| `fine_tune --ft_layers norm_out` | | (`--levels`) | Phase 2 FTn: only InstanceNorm affine parameters + output head (Karani et al. 2018) |
+| `fine_tune --calibrate_only True` | | (none) | Phase 2 CAL: no training; threshold (0.05-0.95) and minimum size (1-8 mm3) re-chosen for pooled lesion F1 on all given scans |
+| `cross_validate --stage2` | joint (paper) | `-cand_disc` | stage 2 on out-of-fold candidates (0.15, >= 1 mm3, 20 mm patches): `joint` = one TrackSet classifier for all cohorts of the manifest (`cohort` field), `separate` = also one per cohort, `none` = stage 1 only |
+| `predict --csf-rule` | (see PAPER_VERSION.md) | `--csf_rule` | drop components whose majority SynthSeg label is CSF |
+
+Differences to cmbx: cmbx chooses the threshold on held-out cases during `train`; here `train` keeps the paper's fixed
+cell and `fine_tune --calibrate_only True` re-chooses it. cmbx' `evaluate` writes `final_predictions/`; here
+`evaluate` writes the paper's layout `fold0/<id>_pred_proba.nii.gz` (uint8 = probability x 255) plus `masks/` and
+`summary.json`.
+
+## From Python
+
+Three tutorials of at most 10 lines each; every path comes from `.env` in the repository root, which is committed with
+paths inside the repository (the shipped synthetic phantoms in `examples/phantoms/`, outputs under `runs/`), so a fresh
+clone runs them unchanged, from any directory. **To use your own data, edit only `.env`** (each variable is explained in
+`.env.example`; relative paths are relative to the repository root). The variable names are those of
+cmb_3d_unet_experiments: `CMB_INPUT_DIR`, `CMB_LABEL_DIR`, `CMB_MODEL_DIR`, `CMB_OUTPUT_DIR`, `CMB_SCAN` (+ `CMB_MASK_DIR`,
+`CMB_GRID_DIR`, `CMB_FINETUNED_DIR`, suffixes, and the quick-run settings `CMB_PATCHES`, `CMB_SEEDS`).
+
+```bash
+python examples/python/tutorial_predict.py
+```
+
+```bash
+python examples/python/tutorial_train.py
+```
+
+```bash
+python examples/python/tutorial_finetune.py
+```
+
+`tutorial_predict.py`:
+```python
+from cmb import env, get_model, predict
+
+get_model("valdo_t2")                     # downloaded once, SHA-256 checked
+result = predict(env())
+print(f"{result['n']} CMB found -> {result['csv']}")
+```
+
+`tutorial_train.py` (stage 1 on all cases, then stage 2 on the out-of-fold candidates of a 5-fold CV; `epochs=1` is a quick
+run, the paper used 60; a 1-epoch U-Net proposes no candidates, so stage 2 is then skipped with a warning):
+```python
+from cmb import env, preprocess, train
+
+E = env()
+preprocess(E)
+model = train(E, epochs=1)
+print("model ->", model)
+```
+
+`tutorial_finetune.py` (the paper's Phase 2 protocol from the VALDO T2* model: full fine-tuning, lr 1e-4, 30 epochs by
+default):
+```python
+from cmb import env, preprocess, fine_tune
+
+E = env()
+preprocess(E)
+model = fine_tune(E, epochs=1)
+print("fine-tuned model ->", model)
+```
+
+The functions (`from cmb import env, get_model, predict, preprocess, train, fine_tune, evaluate, cross_validate`) take
+the command-line options as keyword arguments (`predict("scan.nii.gz", o="out/")`, `train("grid/", m="model/", ep=60)`,
+`fine_tune("grid/", o="ft/", ft_layers="norm_out")`). The paper scripts in `scripts/paper/` read the same settings from
+the environment: `set -a; source .env; set +a` loads `.env` into the shell.
+
+## Weights: licence and citation
+
+`cmb get-model valdo_t2` (also called by `cmb predict` and `install.sh`) downloads the release assets of
+`paper-v3-2026-11` and checks their SHA-256 (`cmb/pretrained.py`). The two files are the stage-1 U-Net members (seeds 42
+and 1) trained on all 72 VALDO 2021 Task 2 training scans and nothing else, byte-identical to the paper's Phase 2 start
+model. **Licence: CC BY-NC-SA 4.0** (derived from the VALDO data): non-commercial use, share alike, attribution. Cite the
+data: Sudre CH et al., Where is VALDO? VAscular Lesions Detection and segmentatiOn challenge at MICCAI 2021, Medical Image
+Analysis 92 (2024) 103029, doi:10.1016/j.media.2023.103029; dataset doi:10.5281/zenodo.4520773 (with the cohort citations
+listed there). No stage-2 classifier is released (none trained on VALDO alone exists as a file).
+
+## Tests
+
+```bash
+python -m pytest -q tests/test_cli.py tests/test_privacy.py
+```
+
+```bash
+bash configs/smoke.sh cpu
+```
+
+`configs/smoke.sh cpu|cuda` runs every command once on phantoms (tiny settings) on the CPU or the GPU.
+
+- `tests/test_workflow.py` and `tests/test_predict.py`: one tiny CPU run of every command on synthetic phantoms
+  (preprocess, train, evaluate, fine_tune full / norm_out / calibrate_only, cross_validate with stage 2 joint and separate,
+  predict as file, folder, positional with `-frst`); about 20 min on a CPU: `python -m pytest -q tests`.
+- `tests/test_tutorials.py`: the three tutorials as they are, from the repository root and from another directory, at most
+  10 lines each, `.env` committed with relative paths only.
+- `tests/test_valdo.py`: the released weights download, load and predict a VALDO case on the CPU (skipped without VALDO).
+- `tests/test_privacy.py`: no machine paths, in-house cohort names or non-VALDO subject ids in the repository.
+- `cmb/tests/`: the research tests as they ran (several need the stored research results).
+
+## Regression check against the paper (public VALDO data, CPU)
+
+This repository's code, run on the stored VALDO inputs of the study, against the stored research results:
+
+| check | command (from the repository root, with the study's VALDO grid and maps linked into `dev/`, `ergebnisse/`) | stored result | this repository |
+|---|---|---|---|
+| stage-2 candidates of the VALDO pool (z40: p > 0.15, >= 1 mm3, 40 x 40 x 40 patches) from the stored out-of-fold maps | `python -m cmb.stage2.candidates --predictions ergebnisse/turnier/a03-aniso-e60-gd --grid dev/gitter_d --keep-csf --half 20 20 20 --threshold 0.15 --min-mm3 1.0 --out OUT` | 278 candidates, `patches.npy` (278 x 3 x 40 x 40 x 40) | **bit-identical** (rows, case table and patches) |
+| stage-1 fixed cell + CSF rule, two-seed ensemble, 57 VALDO CV cases | `python -m cmb.analysis.operating_point --run ens2=ergebnisse/turnier/ens2-a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json --synthseg "dev/synthseg/{id}_synthseg.nii.gz"` | F1 0.647 | **0.647** (P 0.65, S 0.64, FP/case 0.82; cell (0.3, 2.0) in every fold) |
+| stage 1, seed 42 alone, fixed cell | `python -m cmb.transfer.evaluate --run s42=ergebnisse/turnier/a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json` | F1 0.585 | **0.585** |
+| `cmb predict` preprocessing of a raw VALDO scan (sub-101: brain = image > 0, FSL FAST -B, inversion, grid, FRST) | `cmb predict -i .../sub-101_space-T2S_desc-masked_T2S.nii.gz --keep-work` | the study's `dev/gitter_d/sub-101` image and FRST | **bit-identical** (301 x 366 x 140, max difference 0.0) |
+| VALDO-only stage-2 classifier (frozen-V: tset-plain, 3 members, 40 epochs, seed offset 0), pooled out-of-fold threshold on the VALDO pool | `scripts/paper/phase2_finetune/chain_frozenV.py: valdo_only_classifier(0)` on the CPU | threshold 0.50 (all 780 Phase 2 blocks) | **0.55** (out-of-fold F1 0.620 at 0.55): not identical. The training is deterministic for a fixed device and library build; this check ran on the CPU (the stored run chose CUDA when available), and CPU and GPU kernels give different floating-point results. Not re-run on a GPU. |
+
 
 ## Architecture of the chain
 
@@ -126,80 +301,23 @@ Both networks see cut-outs, never the whole volume, and that is a design choice 
 * The second stage sees a 40 x 40 x 20 voxel block (20 mm cube) around each candidate, cropped to 32 x 32 x 16 (16 mm) with random offsets
   and flips in training; two scales (16 + 28 mm) did not help on VALDO (-0.030, 5r).
 
-## Pipeline scripts (numbered = order)
-```
-python pipeline/00_selftest.py              # no data, CPU, < 1 min: imports, FRST, lesion metric, U-Net forward pass, dry run of all steps
-python pipeline/01_preprocess.py            # brain mask + FSL FAST -B once per case, then the image without vessel inpainting
-python pipeline/02_grid_frst.py             # 0.5 x 0.5 x 1 mm grid + FRST channel
-python pipeline/03_synthseg.py              # FreeSurfer SynthSeg tissue maps (CSF rule)
-python pipeline/04_manifest.py              # 57 CV cases with folds
-python pipeline/05_train_unet.py            # a03-aniso, seeds 42 and 1 (GPU)
-python pipeline/06_ensemble_score.py        # ensemble, raw F1, CSF rule -> 0.647
-python pipeline/07_candidates.py            # 16-mm candidate cubes for the second stage
-python pipeline/08_stage2_classifier.py     # pooled 3D CNN (needs private candidates) / transfer variant
-python pipeline/09_external_momeni.py       # external public SWI cohort -> 0.613
-python pipeline/10_baseline_microbleednet.py# original MicrobleedNet fine-tuned on the same folds
-python pipeline/11_qc_viewer.py             # slice viewer
-```
-Every script accepts `--dry-run` (print the exact commands), `--force` (repeat a finished step), `--queue` (GPU steps through the job queue)
-and `--list` (state of all steps). Steps already finished on disk are skipped; the done-checks live in `cmb/experiments/kern.py`.
-
-## Reproduce (VALDO)
-```bash
-python -m cmb.experiments.kern --list            # every core step with its done-check; --dry-run prints the exact commands
-python code/split.py                             # (only if dev/cases.json is rebuilt) stratified 5 folds, seed 0
-python code/preprocess.py --all --out dev/preproc # FSL FAST -B + mask (once); then
-python code/preproc_roh_bauen.py                 # inverted image WITHOUT vessel inpainting (+0.136 F1)
-GITTER_C_QUELLE=$PWD/dev/preproc_roh GITTER_C_ZIEL=$PWD/dev/gitter_d python code/gitter_c_bauen.py --proc 8   # 0.5x0.5x1 mm + FRST
-python code/we5.py --synthseg                    # SynthSeg maps -> dev/synthseg (CSF rule)
-python -m cmb.transfer.build_valdo_manifest --grid dev/gitter_d --out dev/manifest_valdo_gitter_d.json
-python code/turnier.py --netz a03-aniso --epochen 60 --gitter dev/gitter_d            # baseline, seed 42 (GPU, ~1.6 h)
-python code/turnier.py --netz a03-aniso --epochen 60 --gitter dev/gitter_d --seed 1   # second seed
-python -m cmb.analysis.ensemble --runs ergebnisse/turnier/a03-aniso-e60-gd ergebnisse/turnier/a03-aniso-s1-e60-gd --out ergebnisse/turnier/ens2-a03-aniso-e60-gd
-python -m cmb.analysis.operating_point --run ens2=ergebnisse/turnier/ens2-a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json --synthseg "dev/synthseg/{id}_synthseg.nii.gz"   # 0.647
-python -m cmb.stage2.candidates --predictions ergebnisse/turnier/a03-aniso-e60-gd --grid dev/gitter_d --keep-csf --out ergebnisse/stage2/a03-aniso-e60-gd-weich
-```
-Every command of every reported number is in `docs/REPLICATION.md`. GPU steps on the original machine went through a queue
-(`grossauftrag --vram 20`); elsewhere run them directly. Trainings are deterministic per seed (a01 reproduces cv5-r3 to four digits).
-
-## Reproduce (in-house cohort)
-`catalina/hirn_und_bias.py` → `python -m cmb.transfer.build_private_grids --modality t2star|swi` → `catalina/synthseg_*.sh` →
-`python code/turnier.py --netz a03-aniso --epochen 60 --manifest <MB>/gitter/manifest_t2star.json --name cat-t2s --basis <MB>/transfer` →
-`cmb.stage2.candidates ... --keep-csf` → `cmb.stage2.pooled --cohort valdo=... t2star=... swi=... --models cnn --skip-own --tissue`.
-Deployment without private candidates: `python -m cmb.stage2.apply --source ergebnisse/stage2/a03-aniso-e60-gd-weich --target NAME=<candidates>`.
-
-## Results (short)
-| Setting | lesion F1 |
-|---|---|
-| MicrobleedNet re-implementation on VALDO | 0.245 |
-| our chain, VALDO 5-fold CV, two-seed ensemble + CSF rule | 0.647 |
-| held-out 15 VALDO cases (once) | 0.468 pooled (one case with 73 CMB), 0.731 without it, median per case 0.667 |
-| in-house T2* / SWI, own U-Net + shared classifier | 0.671 / 0.672 (fine-tuned original on SWI: 0.406) |
-| external public SWI cohort (Momeni/CSIRO), no adaptation | 0.613 (VALDO U-Net + CSF rule), 0.630 (SWI U-Net + VALDO classifier) |
-What did NOT help (all measured, paired, pre-registered): loss functions, augmentation, longer training, patch size, intensity harmonisation,
-synthetic lesions, second-stage variants, hand-made vessel rules — see `docs/OVERVIEW-tests-2026-09-29.md`.
-
 ## Glossary of the legacy identifiers
-The scripts in `code/` and `catalina/` were written during the study and keep their original German identifiers, because the exact
-commands that produced every reported number use them (`docs/REPLICATION.md`). Comments, help texts and messages are English.
+
+The scripts in `code/` and `scripts/paper/` keep their original German identifiers, because the exact commands that
+produced every number use them.
 
 | identifier | meaning | identifier | meaning |
 |---|---|---|---|
 | `turnier.py`, `--netz` | training runner (tournament), network name | `gitter`, `--gitter` | grid (resampled volume set) |
 | `--epochen` | epochs | `falte`, `fold*` | cross-validation fold |
 | `bauen` (in file names) | build | `hirn`, `hirnmaske` | brain, brain mask |
-| `zusatz`, `--zusatz` | extra input channels (T1, T2) | `landmarken` | intensity landmarks |
-| `we5.py --synthseg` | SynthSeg tissue maps (step 5 of the original chain) | `uebermalung` | vessel inpainting |
-| `gewebekarte` | tissue map | `rangliste` | ranking table |
-| `kohorte`, `faelle` | cohort, cases | `eingaben` | inputs |
-| `ergebnisse/` | results | `dev/` | derived data (preprocessing, grids, manifests) |
+| `kanaele` | input channels | `landmarken` | intensity landmarks |
+| `uebermalung` | vessel inpainting | `gewebekarte` | tissue map |
+| `kohorte`, `faelle` | cohort, cases | `ergebnisse/` | results |
+| `modell.pt`, `verlauf.json` | weights, training history | `dev/` | derived data (grids, manifests, folds) |
 
 ## Licences
-Code: MIT (`LICENSE`). Weights: not in git; VALDO-trained weights CC BY-NC-SA 4.0 (`LICENSE-WEIGHTS.md`). VALDO data: CC BY-NC-SA 4.0, cite
-Sudre et al. 2024. Momeni/CSIRO data: CSIRO Data Licence (non-commercial, no redistribution). In-house data: never leaves the clinic.
 
-## English summary
-Starting from MicrobleedNet (Sundaresan et al. 2023) re-implemented on VALDO Task 2, every component was replaced one at a time and kept only
-if the paired, case-bootstrapped lesion-level F1 improved in 5-fold CV and survived a second seed. Seven changes held: no vessel inpainting,
-an anisotropic 3D U-Net, a 0.5×0.5×1 mm grid, the FRST channel, a bounded sampling budget, a SynthSeg CSF rule and a cross-cohort 3D-CNN
-candidate classifier. Cohort-specific U-Nets with a VALDO-only classifier transfer without private training data.
+Code: MIT (`LICENSE`). Weights: CC BY-NC-SA 4.0, derived from VALDO (`LICENSE-WEIGHTS.md`), release assets only. VALDO
+data: CC BY-NC-SA 4.0, cite Sudre et al. 2024. Momeni/CSIRO data (external test in the thesis phase): CSIRO Data Licence,
+non-commercial, no redistribution. In-house data: never in this repository.
