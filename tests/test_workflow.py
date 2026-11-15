@@ -1,5 +1,6 @@
 """One tiny end-to-end run per command on synthetic phantoms (CPU): preprocess -> train -> evaluate -> fine_tune
 (full, norm/output only, calibration only) -> cross_validate (+ stage 2 joint and separate)."""
+
 import glob
 import json
 import os
@@ -8,6 +9,7 @@ import nibabel as nib
 import numpy as np
 
 from conftest import cmb
+from cmb.nifti import load
 
 
 def test_preprocess_writes_the_paper_grid(grid, cohort):
@@ -15,10 +17,10 @@ def test_preprocess_writes_the_paper_grid(grid, cohort):
     assert sorted(e["id"] for e in man) == sorted(cohort["ids"])
     assert {e["fold"] for e in man} == {0, 1}
     for e in man:
-        img = nib.load(f"{grid}/{e['id']}/{e['id']}_image.nii.gz")
+        img = load(f"{grid}/{e['id']}/{e['id']}_image.nii.gz")
         assert np.allclose(img.header.get_zooms()[:3], (0.5, 0.5, 1.0))
         for kind in ("frst", "label"):
-            assert nib.load(f"{grid}/{e['id']}/{e['id']}_{kind}.nii.gz").shape == img.shape
+            assert load(f"{grid}/{e['id']}/{e['id']}_{kind}.nii.gz").shape == img.shape
     assert sum(e["n_cmb"] for e in man) > 0
 
 
@@ -39,22 +41,39 @@ def test_evaluate(grid, model, tmp_path):
 def test_fine_tune_full_and_norm_out(grid, model, tmp_path):
     for layers in ("all", "norm_out"):
         out = tmp_path / layers
-        cmb("fine_tune", "-i", grid, "-m", model, "-o", out, "--ft_layers", layers, "-ep", "1", "--patches", "8",
-            "--device", "cpu")
+        cmb(
+            "fine_tune",
+            "-i",
+            grid,
+            "-m",
+            model,
+            "-o",
+            out,
+            "--ft_layers",
+            layers,
+            "-ep",
+            "1",
+            "--patches",
+            "8",
+            "--device",
+            "cpu",
+        )
         meta = json.load(open(out / "seed42" / "meta.json"))
         assert meta["variant"] == ("FTn" if layers == "norm_out" else "FT") and meta["lr"] == 1e-4
         if layers == "norm_out":
-            assert meta["n_trainable_params"] < 0.01 * 22.5e6        # only norm affine + output head
+            assert meta["n_trainable_params"] < 0.01 * 22.5e6  # only norm affine + output head
         else:
             assert meta["n_trainable_params"] > 2e7
 
 
 def test_fine_tune_defaults_are_the_paper_recipe():
     from cmb.cli import build_parser
+
     a = build_parser().parse_args(["fine_tune", "-i", "x", "-m", "pre", "-o", "y"])
-    assert a.ep is None and a.ilr is None and a.ft_layers == "all"            # -> 30 epochs, lr 1e-4 in commands.fine_tune
+    assert a.ep is None and a.ilr is None and a.ft_layers == "all"  # -> 30 epochs, lr 1e-4 in commands.fine_tune
     import inspect
     from cmb import commands
+
     src = inspect.getsource(commands.fine_tune)
     assert "a.ep or 30" in src and "a.ilr or 1e-4" in src and "weight_decay=1e-4" in src
 
@@ -74,8 +93,27 @@ def test_cross_validate_with_joint_and_separate_stage2(cohort, tmp_path):
     every reference CMB and on two random spots (finished folds are skipped by code/turnier.py): this tests the stage-2
     wiring (candidates -> joint and separate TrackSet classifiers), not accuracy."""
     g = tmp_path / "g"
-    cmb("preprocess", "-i", cohort["raw"], "-ir", "_T2starw", "-f", "True", "-b", cohort["raw"], "-br", "_brainmask",
-        "-l", cohort["raw"], "-lr", "_cmb", "-o", g, "-fold", "5")
+    cmb(
+        "preprocess",
+        "-i",
+        cohort["raw"],
+        "-ir",
+        "_T2starw",
+        "-f",
+        "True",
+        "-b",
+        cohort["raw"],
+        "-br",
+        "_brainmask",
+        "-l",
+        cohort["raw"],
+        "-lr",
+        "_cmb",
+        "-o",
+        g,
+        "-fold",
+        "5",
+    )
     man = json.load(open(g / "manifest.json"))
     for k, e in enumerate(man):
         e["cohort"] = "siteA" if k % 2 == 0 else "siteB"
@@ -87,17 +125,20 @@ def test_cross_validate_with_joint_and_separate_stage2(cohort, tmp_path):
     maps = glob.glob(str(out / "*" / "fold*" / "*_pred_proba.nii.gz"))
     assert len(maps) == 6
     from scipy import ndimage
+
     rng = np.random.RandomState(0)
     for path in maps:
         case = os.path.basename(path)[: -len("_pred_proba.nii.gz")]
-        ni = nib.load(path)
-        lab = np.asarray(nib.load(g / case / f"{case}_label.nii.gz").dataobj) > 0
-        brain = np.asarray(nib.load(g / case / f"{case}_image.nii.gz").dataobj) > 0
+        ni = load(path)
+        lab = np.asarray(load(g / case / f"{case}_label.nii.gz").dataobj) > 0
+        brain = np.asarray(load(g / case / f"{case}_image.nii.gz").dataobj) > 0
         p = 0.9 * ndimage.binary_dilation(lab, iterations=1)
         for c in np.argwhere(brain)[rng.randint(brain.sum(), size=2)]:
             p[tuple(slice(max(v - 2, 0), v + 3) for v in c)] = 0.5
         nib.save(nib.Nifti1Image(np.round(p * 255).astype(np.uint8), ni.affine), path)
-    r = cmb("cross_validate", "-i", g, "-o", out, "-ep", "1", "--patches", "8", "--stage2", "separate", "--device", "cpu")
+    r = cmb(
+        "cross_validate", "-i", g, "-o", out, "-ep", "1", "--patches", "8", "--stage2", "separate", "--device", "cpu"
+    )
     text = json.dumps(json.load(open(out / "stage2.json")))
     assert "pooled tset-plain" in text and "own tset-plain" in text, r.stdout[-2000:]
 

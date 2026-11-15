@@ -14,7 +14,9 @@ authors = [{name = "mendeltem"}]
 dependencies = ["numpy", "scipy", "nibabel", "scikit-image", "scikit-learn", "pillow", "simpleitk", "tqdm", "torch"]
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+test = ["pytest>=7", "hypothesis>=6"]
+# the checks of CI (.github/workflows/checks.yml); versions fixed so a new release cannot fail an unchanged tree
+dev = ["ruff==0.17.5", "pyright==1.1.414", "import-linter==2.16"]
 
 [project.scripts]
 cmb = "cmb.cli:main"
@@ -24,3 +26,79 @@ include = ["cmb*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "valdo: needs the VALDO 2021 data (not redistributable; skipped without CMB_VALDO, never run in CI)",
+]
+
+# ---------------------------------------------------------------------------------------------- static analysis
+# Scope: the command line and library layer added for the release (cmb/cli.py, commands.py, predict_cli.py, api.py,
+# checks.py, ...), its tests and the tutorials. The research code that produced the paper's numbers (the cmb/
+# research packages, cmb/metrics.py, cmb/paths.py, code/, scripts/, pipeline/) is frozen at tag paper-v3-2026-11:
+# it is excluded here rather than rewritten, and tests/test_frozen.py checks that it stays byte-identical.
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+    "code", "scripts", "pipeline", "dev", "docs", "configs", "env",
+    "cmb/analysis", "cmb/baselines", "cmb/experiments", "cmb/maskfix", "cmb/models", "cmb/review", "cmb/stage2",
+    "cmb/synthesis", "cmb/teaching", "cmb/training", "cmb/transfer", "cmb/tests", "cmb/metrics.py", "cmb/paths.py",
+]
+
+[tool.ruff.lint]
+# bug classes, not style: pyflakes (F), syntax/statement errors (E4, E7, E9), bugbear (B), pylint errors (PLE),
+# implicit Optional (RUF013), stale noqa (RUF100), banned calls (TID251)
+select = ["E4", "E7", "E9", "F", "B", "PLE", "RUF013", "RUF100", "TID251"]
+
+[tool.ruff.lint.per-file-ignores]
+# the Python API keeps the command-line letters (-l labels, -b brain masks), so `l` is a parameter name there
+"cmb/api.py" = ["E741"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"os.path.expanduser".msg = "home-relative paths break on every other machine: take the location from cmb.paths or an environment variable"
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.pyright]
+include = ["cmb/cli.py", "cmb/commands.py", "cmb/predict_cli.py", "cmb/api.py", "cmb/checks.py", "cmb/nifti.py",
+           "cmb/selftest.py", "cmb/pretrained.py", "cmb/envfile.py", "cmb/synthetic.py", "cmb/__init__.py",
+           "cmb/__main__.py", "tests", "examples/python"]
+typeCheckingMode = "basic"
+pythonVersion = "3.10"
+# the paper code imported by path (code/cv5.py, code/metric.py, ... and the Phase 2 scripts), and tests/conftest.py
+extraPaths = ["code", "scripts/paper/phase2_finetune", "tests"]
+
+# ---------------------------------------------------------------------------------------------- import contracts
+# lint-imports (import-linter). Only the cmb package is a Python package; code/ and scripts/ are imported by path
+# (sys.path), which import-linter cannot see -- tests/test_frozen.py checks those paths instead.
+[tool.importlinter]
+root_package = "cmb"
+
+[[tool.importlinter.contracts]]
+name = "research code does not import the command-line layer"
+type = "forbidden"
+source_modules = [
+    "cmb.analysis", "cmb.baselines", "cmb.experiments", "cmb.maskfix", "cmb.models", "cmb.review", "cmb.stage2",
+    "cmb.synthesis", "cmb.teaching", "cmb.training", "cmb.transfer", "cmb.metrics", "cmb.paths",
+]
+forbidden_modules = [
+    "cmb.cli", "cmb.commands", "cmb.predict_cli", "cmb.api", "cmb.checks", "cmb.nifti", "cmb.selftest", "cmb.pretrained",
+    "cmb.envfile", "cmb.synthetic",
+]
+
+[[tool.importlinter.contracts]]
+name = "only tests import the research tests"
+type = "forbidden"
+source_modules = [
+    "cmb.analysis", "cmb.baselines", "cmb.experiments", "cmb.maskfix", "cmb.models", "cmb.review", "cmb.stage2",
+    "cmb.synthesis", "cmb.teaching", "cmb.training", "cmb.transfer", "cmb.metrics", "cmb.paths",
+    "cmb.cli", "cmb.commands", "cmb.predict_cli", "cmb.api", "cmb.checks", "cmb.nifti", "cmb.selftest", "cmb.pretrained",
+    "cmb.envfile", "cmb.synthetic",
+]
+forbidden_modules = ["cmb.tests"]
+
+[[tool.importlinter.contracts]]
+name = "the input checks and helpers depend on nothing above them"
+type = "forbidden"
+source_modules = ["cmb.checks", "cmb.nifti", "cmb.paths", "cmb.envfile"]
+forbidden_modules = ["cmb.cli", "cmb.commands", "cmb.predict_cli", "cmb.api", "cmb.selftest", "cmb.pretrained"]
