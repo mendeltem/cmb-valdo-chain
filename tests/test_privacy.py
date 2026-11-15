@@ -5,7 +5,7 @@ import subprocess
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATTERN = re.compile(r"/home/[a-z]|uchralt|sc-projects|sc-scratch|s-sc-frontend|csw-|c2s-|\bc2s\b|\bcsw\b|\bsub-t\d|\bPDD\d"
-                     r"|catalina|charit[eé]|\balita\b|belove|demdas|mb-arena|valdo-t2s", re.I)
+                     r"|~/(?!\.cache|\.local)|expanduser\(\"~/|catalina|charit[eé]|\balita\b|belove|demdas|mb-arena|valdo-t2s", re.I)
 
 
 def tracked_files():

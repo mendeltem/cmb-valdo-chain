@@ -8,8 +8,9 @@ import os, sys, glob, subprocess, shutil, tempfile
 import numpy as np, nibabel as nib, pandas as pd
 Q = os.environ.get("CMB_SOURCEDATA", "sourcedata"); ZIEL = os.environ.get("CMB_BIDS", "bids")
 MOD = {"swi": ("BIDS_SWI", "swi", "SWI", "_acq-swi_T2starw"), "t2star": ("BIDS_T2_STAR", "t2", "T2", "_T2starw")}
-HDBET = os.path.expanduser("~/miniconda3/envs/medizin/bin/hd-bet"); FAST = os.path.expanduser("~/fsl/share/fsl/bin/fast")
-FSLENV = dict(os.environ, FSLDIR=os.path.expanduser("~/fsl"), FSLOUTPUTTYPE="NIFTI_GZ")
+HDBET = os.environ.get("HDBET", shutil.which("hd-bet") or "hd-bet")   # HD-BET executable
+FAST = os.path.join(os.environ.get("FSLDIR", "/usr/local/fsl"), "bin", "fast")
+FSLENV = dict(os.environ, FSLOUTPUTTYPE="NIFTI_GZ")
 mod = sys.argv[1]; alle = "--alle" in sys.argv
 ordner, unter, suffix, stamm = MOD[mod]; basis = f"{Q}/{ordner}"; ds = f"{ZIEL}/inhouse-{mod}"
 tsv = pd.read_csv(f"{basis}/participants.tsv", sep="\t")

@@ -81,7 +81,8 @@ cmb predict -i data/valdo2021/Task2/sub-101/sub-101_space-T2S_desc-masked_T2S.ni
 
 What `cmb predict` does, each step skipped when you pass its result: brain mask (`--brain-mask`; image > 0 for a
 skull-stripped scan; else HD-BET; else a rough intensity mask with a warning) -> bias correction (FSL FAST -B as in the
-paper; `--no-bias-correction`) -> inversion `1 - I/max` -> the 0.5 x 0.5 x 1 mm grid -> FRST (`--frst FILE` to use your
+paper; `--no-bias-correction`) -> reorientation to RAS+ and inversion `1 - I/max` as the paper did for its own
+cohorts (`--profile own`, default; `--profile valdo` = the VALDO grid) -> the 0.5 x 0.5 x 1 mm grid -> FRST (`--frst FILE` to use your
 own, with a warning) -> the VALDO-72 U-Net (two seeds averaged) -> the paper's fixed cell (probability > 0.3, components
 >= 2 mm3 and <= 2100 voxels) -> optional `--csf-rule` (SynthSeg) -> back to the scan grid.
 
@@ -131,6 +132,8 @@ candidates (a 1-epoch model proposes none, so the quick try above leaves it out;
 |---|---|---|---|
 | `preprocess -f True` | | same | scans already skull-stripped and bias-corrected (no FSL) |
 | `preprocess -fold` | 5 | 5 | folds written into `manifest.json` (stratified by CMB count) |
+| `preprocess -ir / -lr / -br` | | same | suffix at the END of the file name; searched recursively (flat folder or BIDS tree; `derivatives/` is not searched for scans) |
+| `preprocess / predict --profile` | own | (none) | `own` = the paper's pipeline for its own cohorts (RAS+ reorientation, brain = mask and image > 0); `valdo` = exactly the VALDO grid `dev/gitter_d` (CHANGES.md) |
 | `train -ep / -ilr / -bs` | 60 / 3e-4 / 4 | 60 / 3e-4 / 4 | epochs, learning rate, batch size (recipe of `code/cv5.py`) |
 | `train --seeds` | 42 1 | (one model) | one member per seed; predictions average the members |
 | `train --frst` | True | True | FRST as the second input channel |
@@ -143,7 +146,8 @@ candidates (a 1-epoch model proposes none, so the quick try above leaves it out;
 Differences to cmbx: cmbx chooses the threshold on held-out cases during `train`; here `train` keeps the paper's fixed
 cell and `fine_tune --calibrate_only True` re-chooses it. cmbx' `evaluate` writes `final_predictions/`; here
 `evaluate` writes the paper's layout `fold0/<id>_pred_proba.nii.gz` (uint8 = probability x 255) plus `masks/` and
-`summary.json`.
+`summary.json`, scored like the paper over every labelled scan (false positives on CMB-free scans count).
+Changes after the paper tag: `CHANGES.md`.
 
 ## From Python
 
@@ -242,7 +246,7 @@ This repository's code, run on the stored VALDO inputs of the study, against the
 | stage-2 candidates of the VALDO pool (z40: p > 0.15, >= 1 mm3, 40 x 40 x 40 patches) from the stored out-of-fold maps | `python -m cmb.stage2.candidates --predictions ergebnisse/turnier/a03-aniso-e60-gd --grid dev/gitter_d --keep-csf --half 20 20 20 --threshold 0.15 --min-mm3 1.0 --out OUT` | 278 candidates, `patches.npy` (278 x 3 x 40 x 40 x 40) | **bit-identical** (rows, case table and patches) |
 | stage-1 fixed cell + CSF rule, two-seed ensemble, 57 VALDO CV cases | `python -m cmb.analysis.operating_point --run ens2=ergebnisse/turnier/ens2-a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json --synthseg "dev/synthseg/{id}_synthseg.nii.gz"` | F1 0.647 | **0.647** (P 0.65, S 0.64, FP/case 0.82; cell (0.3, 2.0) in every fold) |
 | stage 1, seed 42 alone, fixed cell | `python -m cmb.transfer.evaluate --run s42=ergebnisse/turnier/a03-aniso-e60-gd --manifest dev/manifest_valdo_gitter_d.json` | F1 0.585 | **0.585** |
-| `cmb predict` preprocessing of a raw VALDO scan (sub-101: brain = image > 0, FSL FAST -B, inversion, grid, FRST) | `cmb predict -i .../sub-101_space-T2S_desc-masked_T2S.nii.gz --keep-work` | the study's `dev/gitter_d/sub-101` image and FRST | **bit-identical** (301 x 366 x 140, max difference 0.0) |
+| preprocessing of a raw VALDO scan (sub-101: brain = image > 0, FSL FAST -B, inversion, grid, FRST) | `cmb preprocess -i <folder with sub-101> -ir _T2S -o OUT --profile valdo` (`tests/test_preprocess.py`) | the study's `dev/gitter_d/sub-101` image and FRST | **bit-identical** (301 x 366 x 140, max difference 0.0) |
 | VALDO-only stage-2 classifier (frozen-V: tset-plain, 3 members, 40 epochs, seed offset 0), pooled out-of-fold threshold on the VALDO pool | `scripts/paper/phase2_finetune/chain_frozenV.py: valdo_only_classifier(0)` on the CPU | threshold 0.50 (all 780 Phase 2 blocks) | **0.55** (out-of-fold F1 0.620 at 0.55): not identical. The training is deterministic for a fixed device and library build; this check ran on the CPU (the stored run chose CUDA when available), and CPU and GPU kernels give different floating-point results. Not re-run on a GPU. |
 
 

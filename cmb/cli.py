@@ -33,7 +33,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("preprocess", help="raw scans -> the paper's model grid (brain mask, FAST, inversion, grid, FRST)")
     p.add_argument("-i", required=True, help="folder with the raw scans")
-    p.add_argument("-ir", required=True, help="scan name suffix, e.g. _T2starw (file <id><suffix>.nii.gz)")
+    p.add_argument("-ir", required=True, help="scan name suffix at the END of the file name, e.g. _T2starw (<id>_T2starw.nii.gz); "
+                   "searched recursively (flat folders and BIDS trees); names ending in -lr / -br are never scans")
     p.add_argument("-f", default="False", help="True: scans are already skull-stripped and bias-corrected (no FSL)")
     p.add_argument("-b", default=None, help="folder with brain masks (default: computed, see cmb predict --help)")
     p.add_argument("-br", default="_brainmask", help="brain mask suffix")
@@ -42,6 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-o", required=True, help="output grid folder (one <id>/ per case + manifest.json)")
     p.add_argument("-fold", type=int, default=5, help="number of cross-validation folds written into manifest.json")
     p.add_argument("--cohort", default="data", help="cohort name in the manifest (the joint/separate classifier groups by it)")
+    p.add_argument("--profile", choices=["own", "valdo"], default="own",
+                   help="own = the paper's pipeline for its own cohorts (cmb.transfer.build_private_grids: RAS+ reorientation, "
+                        "brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d (no reorientation)")
 
     p = sub.add_parser("train", help="train the stage-1 U-Net on all cases (cmb.training.full_data)")
     p.add_argument("-i", required=True, help="grid folder from cmb preprocess")

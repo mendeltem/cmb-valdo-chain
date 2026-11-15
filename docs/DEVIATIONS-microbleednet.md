@@ -9,7 +9,7 @@ procedure) / **medium** (same idea, different parameters) / **large** (different
 
 - Original: https://github.com/v-sundaresan/microbleed-detection , state **commit 958f1cb from 2026-03-19**
   ("Merge pull request #7 from g-shanker/main"). Checked online on 2026-09-19: that is the newest commit there.
-- Local copy: `~/software/microbleed-detection` = fork `github.com/mendeltem/custom_microbleednet`,
+- Local copy (CMB_MICROBLEEDNET_SRC) = fork `github.com/mendeltem/custom_microbleednet`,
   = original 958f1cb + 1 fork commit + uncommitted changes in 3 files (layer A below).
 - Read from the source code: `microbleednet/scripts/data_preparation.py` (preprocessing). Everything below marked
   "(note)" comes from my project notes of 11 Sep and has NOT been checked against the original today.

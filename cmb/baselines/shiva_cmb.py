@@ -24,7 +24,7 @@ Pipeline per case
 
 Run inside the dedicated environment (TensorFlow lives there, not in ``dl``):
 
-    CUDA_VISIBLE_DEVICES="" ~/miniconda3/envs/shiva/bin/python -m cmb.baselines.shiva_cmb \
+    CUDA_VISIBLE_DEVICES="" <python of the SHIVA environment> -m cmb.baselines.shiva_cmb \
         --cohort valdo --out ergebnisse/baselines/shiva-cmb-valdo
 """
 from __future__ import annotations

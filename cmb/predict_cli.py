@@ -146,15 +146,49 @@ def invert(restore: np.ndarray) -> np.ndarray:
     return np.where(brain, 1 - restore / restore.max(), 0).astype(np.float32)
 
 
-def build_grid(case: str, inverted: np.ndarray, ni, work: str) -> dict:
-    """The paper's grid builder (code/gitter_c_bauen.py ``fall``) on a one-case source folder."""
+PROFILES = ("own", "valdo")
+
+
+def source_volumes(restore: np.ndarray, brain: np.ndarray, label: np.ndarray, ni, profile: str = "own"):
+    """The image the grid builder starts from (inverted, 0 outside the brain), its label and its affine/header, exactly
+    as the paper made them:
+
+    * ``own``  -- the paper's pipeline for its own (in-house) cohorts, ``cmb.transfer.build_private_grids.prepare_source``:
+      bias-corrected image, brain mask and label reoriented to RAS+ (``nibabel.as_closest_canonical``), brain = mask AND
+      image > 0, ``1 - I / max(I in the brain)``, voxels at 0 inside the brain set to 1e-6, saved without the scan header.
+    * ``valdo`` -- the VALDO grid ``dev/gitter_d`` (``code/preproc_roh_bauen.py``): no reorientation, brain = image > 0
+      with holes filled, ``1 - I / max(I)``, saved with the scan header.
+    Returns (inverted, label uint8, affine, header or None)."""
     import nibabel as nib
-    src, dst = os.path.join(work, "source"), os.path.join(work, "grid")
+    if profile == "valdo":
+        return invert(restore), (label > 0).astype(np.uint8), ni.affine, ni.header
+    if profile != "own":
+        raise SystemExit(f"unknown profile {profile!r} (own | valdo)")
+    image_nii = nib.as_closest_canonical(nib.Nifti1Image(restore.astype(np.float32), ni.affine, ni.header))
+    canon = lambda a: np.asarray(nib.as_closest_canonical(nib.Nifti1Image(a.astype(np.uint8), ni.affine)).dataobj) > 0
+    image = np.asarray(image_nii.dataobj, dtype=np.float32)
+    b, lab = canon(brain), canon(label)
+    b &= image > 0
+    inverted = np.where(b, 1.0 - image / image[b].max(), 0.0).astype(np.float32)
+    inverted[b & (inverted <= 0)] = 1e-6                                     # 0 is reserved for "outside the brain"
+    return inverted, lab.astype(np.uint8), image_nii.affine, None
+
+
+def build_grid(case: str, inverted: np.ndarray, affine, header, work: str, label: np.ndarray = None, dst: str = None) -> dict:
+    """The paper's grid builder (code/gitter_c_bauen.py ``fall``) on a one-case source folder. header None = saved
+    without a header, as prepare_source of the own-cohort pipeline does."""
+    import nibabel as nib
+    src, dst = os.path.join(work, "source"), dst or os.path.join(work, "grid")
     os.makedirs(os.path.join(src, case), exist_ok=True)
-    hdr = ni.header.copy(); hdr.set_data_dtype(np.float32)
-    nib.save(nib.Nifti1Image(inverted, ni.affine, hdr), f"{src}/{case}/{case}_image.nii.gz")
-    hdr8 = ni.header.copy(); hdr8.set_data_dtype(np.uint8)
-    nib.save(nib.Nifti1Image(np.zeros(inverted.shape, np.uint8), ni.affine, hdr8), f"{src}/{case}/{case}_label.nii.gz")
+    label = np.zeros(inverted.shape, np.uint8) if label is None else label.astype(np.uint8)
+    if header is None:
+        nib.save(nib.Nifti1Image(inverted, affine), f"{src}/{case}/{case}_image.nii.gz")
+        nib.save(nib.Nifti1Image(label, affine), f"{src}/{case}/{case}_label.nii.gz")
+    else:
+        hdr = header.copy(); hdr.set_data_dtype(np.float32)
+        nib.save(nib.Nifti1Image(inverted, affine, hdr), f"{src}/{case}/{case}_image.nii.gz")
+        hdr8 = header.copy(); hdr8.set_data_dtype(np.uint8)
+        nib.save(nib.Nifti1Image(label, affine, hdr8), f"{src}/{case}/{case}_label.nii.gz")
     sys.path.insert(0, os.path.join(ROOT, "code"))
     keep = os.environ.get("CUDA_VISIBLE_DEVICES")
     import gitter_c_bauen as builder                  # its import hides the GPU for its own worker processes ...
@@ -167,17 +201,22 @@ def build_grid(case: str, inverted: np.ndarray, ni, work: str) -> dict:
     if "fehler" in info:
         raise SystemExit(f"grid builder failed: {info['fehler']}")
     info["dir"] = os.path.join(dst, case)
+    shutil.rmtree(os.path.join(src, case), ignore_errors=True)
     return info
 
 
-def own_frst_on_grid(frst_path: str, ni, info: dict, grid_shape) -> np.ndarray:
-    """Resample a user-supplied FRST map (on the scan grid) with the grid builder's index transform."""
+def own_frst_on_grid(frst_path: str, ni, info: dict, grid_shape, profile: str = "own") -> np.ndarray:
+    """Resample a user-supplied FRST map (on the scan grid) with the grid builder's index transform (reoriented to RAS+
+    first for the own profile, like the image)."""
     import nibabel as nib
     from scipy import ndimage
-    fr = np.asarray(nib.load(frst_path).dataobj, dtype=np.float32)
-    if fr.shape[:3] != ni.shape[:3]:
-        raise SystemExit(f"--frst {fr.shape} does not match the scan {ni.shape}")
-    s = np.sqrt((ni.affine[:3, :3] ** 2).sum(0))
+    fni = nib.load(frst_path)
+    if fni.shape[:3] != ni.shape[:3]:
+        raise SystemExit(f"--frst {fni.shape} does not match the scan {ni.shape}")
+    if profile == "own":
+        fni = nib.as_closest_canonical(nib.Nifti1Image(np.asarray(fni.dataobj, dtype=np.float32), ni.affine))
+    fr = np.asarray(fni.dataobj, dtype=np.float32)
+    s = np.sqrt((fni.affine[:3, :3] ** 2).sum(0))
     r = np.array(GRID_MM) / s
     off = np.array(info["crop_offset_quellvoxel"], float)
     return ndimage.affine_transform(fr, r, offset=off, output_shape=tuple(grid_shape), order=1, mode="nearest",
@@ -237,7 +276,8 @@ def synthseg_on_grid(restore_path: str, grid_img, work: str, log) -> Optional[np
 
 # ----------------------------------------------------------------------------------------------- one scan
 def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str] = None, mask: Optional[str] = None,
-            bias: str = "auto", csf: bool = False, keep_work: bool = False, log=print, cell: dict = None) -> dict:
+            bias: str = "auto", csf: bool = False, keep_work: bool = False, log=print, cell: dict = None,
+            profile: str = "own") -> dict:
     import nibabel as nib
     import nibabel.processing  # noqa: F401
     from scipy import ndimage
@@ -257,15 +297,15 @@ def run_one(scan: str, out_dir: str, model_dir: str, models, frst: Optional[str]
         img = np.nan_to_num(img)
         brain = brain_mask(img, ni, mask, work, log)
         restore = bias_correct(np.where(brain, img, 0).astype(np.float32), ni, bias, work, log)
-        inverted = invert(restore)
-        case = "case"
-        info = build_grid(case, inverted, ni, work)
+        inverted, _, src_affine, src_header = source_volumes(restore, brain, np.zeros(img.shape, np.uint8), ni, profile)
+        case = "case0"
+        info = build_grid(case, inverted, src_affine, src_header, work)
         g_img = nib.load(f"{info['dir']}/{case}_image.nii.gz")
         image = np.asarray(g_img.dataobj, dtype=np.float32)
         if frst:
             warn("--frst: using your FRST map resampled to the grid; the model was trained on the FRST this code "
                  "computes on the grid (code/frst.py, radii 1-3 mm). Different scaling changes the result.")
-            fr = own_frst_on_grid(frst, ni, info, image.shape)
+            fr = own_frst_on_grid(frst, ni, info, image.shape, profile)
         else:
             fr = np.asarray(nib.load(f"{info['dir']}/{case}_frst.nii.gz").dataobj, dtype=np.float32)
         prob = predict_grid(models, case, image, fr, g_img.affine)
@@ -341,6 +381,9 @@ def add_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--no-bias-correction", action="store_true", help="the scan is already bias-corrected")
     ap.add_argument("--csf-rule", action="store_true", help="drop components in CSF (needs FreeSurfer mri_synthseg)")
     ap.add_argument("--keep-work", action="store_true", help="keep the intermediate grid files")
+    ap.add_argument("--profile", choices=PROFILES, default="own",
+                    help="how the scan becomes the model's input: own = the paper's pipeline for its own cohorts (RAS+ "
+                         "reorientation, brain = mask and image > 0; default); valdo = exactly the VALDO grid dev/gitter_d")
 
 
 def main(argv=None) -> None:
@@ -381,7 +424,7 @@ def run(a) -> None:
     total, results = 0, []
     for s in scans:
         r = run_one(s, out, model_dir, models, frst=a.frst, mask=a.brain_mask, bias=bias, csf=a.csf_rule,
-                    keep_work=a.keep_work, log=lambda m: print("  " + m, flush=True), cell=cell)
+                    keep_work=a.keep_work, log=lambda m: print("  " + m, flush=True), cell=cell, profile=a.profile)
         total += r["n"]
         r.update(output=out, csv=os.path.join(out, f"{r['name']}_cmb.csv"))
         results.append(r)
