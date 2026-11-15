@@ -65,7 +65,8 @@ def predict(i, o: Optional[str] = None, m: Optional[str] = None, frst: Optional[
 
 
 def preprocess(i, o: Optional[str] = None, ir: str = "_T2starw", f: bool = False, b: Optional[str] = None,
-               br: str = "_brainmask", l: Optional[str] = None, lr: str = "_cmb", fold: int = 5, cohort: str = "data") -> str:
+               br: str = "_brainmask", l: Optional[str] = None, lr: str = "_cmb", fold: int = 5, cohort: str = "data",
+               profile: str = "own") -> str:
     """cmb preprocess. ``i`` = raw folder, or ``env()`` (CMB_INPUT_DIR, CMB_LABEL_DIR, CMB_MASK_DIR, suffixes -> CMB_GRID_DIR;
     with brain masks given the scans count as skull-stripped, -f True). Returns the grid folder."""
     if isinstance(i, SimpleNamespace):
@@ -75,7 +76,7 @@ def preprocess(i, o: Optional[str] = None, ir: str = "_T2starw", f: bool = False
                                   getattr(E, "CMB_LABEL_SUFFIX", lr))
         f = f or bool(b)
     _cli(["preprocess", "-i", i, "-o", o, "-ir", ir, "-f", str(bool(f)), "-br", br, "-lr", lr, "-fold", fold,
-          "--cohort", cohort] + _opts(b=b, l=l))
+          "--cohort", cohort, "--profile", profile] + _opts(b=b, l=l))
     return o
 
 

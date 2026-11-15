@@ -57,8 +57,8 @@ def grid_test():
     img, lab, brain, aff = synthetic.phantom(0)
     with tempfile.TemporaryDirectory() as d:
         ni = nib.Nifti1Image(img, aff)
-        info = predict.build_grid("case", predict.invert(img), ni, d)
-        g = nib.load(f"{info['dir']}/case_frst.nii.gz")
+        info = predict.build_grid("case0", predict.invert(img), ni.affine, ni.header, d)
+        g = nib.load(f"{info['dir']}/case0_frst.nii.gz")
         assert np.isfinite(np.asarray(g.dataobj)).all() and info["affinen_konsistent"], info
         print(f"      grid {info['quelle_shape']} -> {info['shape']} (0.5 x 0.5 x 1 mm)")
 

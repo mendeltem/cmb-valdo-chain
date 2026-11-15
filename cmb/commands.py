@@ -45,12 +45,61 @@ def _run(cmd, **kw):
 
 
 # ---------------------------------------------------------------------------------------------------- manifests
+NII = (".nii.gz", ".nii")
+
+
+def strip_ext(suffix: str) -> str:
+    """'_brainmask.nii.gz' -> '_brainmask' (cmbx writes the suffixes with the extension, both forms are accepted)."""
+    for e in NII:
+        if suffix and suffix.endswith(e):
+            return suffix[: -len(e)]
+    return suffix or ""
+
+
+def nifti_files(root: str, skip_dirs=()):
+    """Every .nii / .nii.gz below root (recursive: flat folders and BIDS trees), sorted; folders named in skip_dirs and
+    hidden folders are not entered."""
+    out = []
+    for d, dirs, files in os.walk(root, followlinks=True):
+        dirs[:] = sorted(x for x in dirs if not x.startswith(".") and x not in skip_dirs)
+        out += [os.path.join(d, f) for f in files if f.endswith(NII)]
+    return sorted(out)
+
+
+def name_stem(path: str) -> str:
+    b = os.path.basename(path)
+    for e in NII:
+        if b.endswith(e):
+            return b[: -len(e)]
+    return b
+
+
+def find_scans(root: str, suffix: str, exclude=()):
+    """{case id: path} of the scans: files whose name (without extension) ENDS with the suffix, searched recursively;
+    names ending with one of the exclude suffixes (label, brain mask) are never scans. The case id is the name without
+    the suffix (BIDS: sub-001_T2starw.nii.gz with -ir _T2starw -> sub-001). In a BIDS tree the folders derivatives/,
+    sourcedata/ and code/ hold no raw scans and are skipped (point -i into derivatives/ to use processed images)."""
+    suffix = strip_ext(suffix)
+    exclude = [strip_ext(x) for x in exclude if x]
+    scans = {}
+    for f in nifti_files(root, skip_dirs=("derivatives", "sourcedata", "code")):
+        stem = name_stem(f)
+        if not stem.endswith(suffix) or any(x and stem.endswith(x) for x in exclude):
+            continue
+        case = stem[: len(stem) - len(suffix)] if suffix else stem
+        if case in scans:
+            raise SystemExit(f"case id {case} found twice: {scans[case]} and {f} -- make the scan suffix (-ir) more specific")
+        scans[case] = f
+    return scans
+
+
 def find(folder: str, case: str, suffix: str):
-    for cand in (f"{case}{suffix}", f"{case}{suffix}.nii.gz", f"{case}{suffix}.nii"):
-        p = os.path.join(folder, cand)
-        if os.path.exists(p):
-            return p
-    return None
+    """The file <case><suffix>.nii[.gz] anywhere below folder (recursive; BIDS derivatives)."""
+    want = case + strip_ext(suffix)
+    hits = [f for f in nifti_files(folder) if name_stem(f) == want]
+    if len(hits) > 1:
+        raise SystemExit(f"{want}: {len(hits)} files below {folder}: {hits[:3]}")
+    return hits[0] if hits else None
 
 
 def assign_folds(entries, n_folds: int):
@@ -92,51 +141,43 @@ def grid_manifest(grid: str, labels: str = None, n_folds: int = 5) -> str:
 
 # ---------------------------------------------------------------------------------------------------- preprocess
 def preprocess(a) -> None:
-    """Raw scans -> the paper's model grid (brain mask, FSL FAST -B, inversion, 0.5 x 0.5 x 1 mm, FRST)."""
+    """Raw scans -> the paper's model grid: brain mask, FSL FAST -B, the profile's source image (own = the paper's
+    pipeline for its own cohorts, valdo = the VALDO grid), 0.5 x 0.5 x 1 mm, FRST (code/gitter_c_bauen.py)."""
     import nibabel as nib
-    from scipy import ndimage
     from cmb import predict_cli as P
-    raw = a.i
-    files = sorted(f for f in glob.glob(os.path.join(raw, f"*{a.ir}*")) if f.endswith((".nii", ".nii.gz")))
-    if not files:
-        raise SystemExit(f"no files *{a.ir}*.nii[.gz] in {raw}")
+    scans = find_scans(a.i, a.ir, exclude=[a.lr if a.l else None, a.br if a.b else None, "_brainmask", "_mask"])
+    if not scans:
+        raise SystemExit(f"no scans *{strip_ext(a.ir)}.nii[.gz] below {a.i} (searched recursively)")
     out = os.path.abspath(a.o); os.makedirs(out, exist_ok=True)
     entries = []
-    for f in files:
-        case = os.path.basename(f).split(a.ir)[0]
+    for case, f in sorted(scans.items()):
         t0 = time.time()
         ni = nib.load(f); img = np.nan_to_num(np.asarray(ni.dataobj, dtype=np.float32))
+        if img.ndim == 4 and img.shape[3] == 1:
+            img = img[..., 0]
         work = os.path.join(out, f".work_{case}"); os.makedirs(work, exist_ok=True)
         mask = find(a.b, case, a.br) if a.b else None
         if a.b and not mask:
-            raise SystemExit(f"{case}: no brain mask {case}{a.br} in {a.b}")
+            raise SystemExit(f"{case}: no brain mask {case}{strip_ext(a.br)}.nii[.gz] below {a.b}")
         brain = P.brain_mask(img, ni, mask, work, lambda m: None)
         masked = np.where(brain, img, 0).astype(np.float32)
         restore = masked if as_bool(a.f) else P.bias_correct(masked, ni, "auto", work, lambda m: None)
-        inverted = P.invert(restore)
         lab = np.zeros(img.shape, np.uint8)
         if a.l:
             lp = find(a.l, case, a.lr)
             if not lp:
-                raise SystemExit(f"{case}: no label {case}{a.lr} in {a.l}")
-            lab = (np.asarray(nib.load(lp).dataobj) > 0).astype(np.uint8)
-        src = os.path.join(work, "source", case); os.makedirs(src, exist_ok=True)
-        nib.save(nib.Nifti1Image(inverted, ni.affine, ni.header), f"{src}/{case}_image.nii.gz")
-        h8 = ni.header.copy(); h8.set_data_dtype(np.uint8)
-        nib.save(nib.Nifti1Image(lab, ni.affine, h8), f"{src}/{case}_label.nii.gz")
-        sys.path.insert(0, os.path.join(ROOT, "code"))
-        import gitter_c_bauen as builder
-        builder.QUELLE, builder.ZIEL = os.path.dirname(src), out
-        info = builder.fall((case, 0, False))
-        if "fehler" in info:
-            raise SystemExit(f"{case}: grid builder failed: {info['fehler']}")
+                raise SystemExit(f"{case}: no label {case}{strip_ext(a.lr)}.nii[.gz] below {a.l}")
+            lab = np.asarray(nib.load(lp).dataobj)
+            lab = (lab[..., 0] if lab.ndim == 4 else lab) > 0
+        inverted, label, affine, header = P.source_volumes(restore, brain, lab, ni, a.profile)
+        info = P.build_grid(case, inverted, affine, header, work, label=label, dst=out)
         shutil.rmtree(work, ignore_errors=True)
-        entries.append(dict(id=case, n_cmb=int(info["n_cmb"]), cohort=a.cohort))
+        entries.append(dict(id=case, n_cmb=int(info["n_cmb"]), cohort=a.cohort, labelled=bool(a.l)))
         print(f"{case}: grid {info['shape']}, {info['n_cmb']} CMB [{time.time() - t0:.0f} s]", flush=True)
     assign_folds(entries, a.fold)
-    json.dump([dict(id=e["id"], fold=e["fold"], dir=e["id"], cohort=e["cohort"], n_cmb=e["n_cmb"]) for e in entries],
-              open(os.path.join(out, "manifest.json"), "w"), indent=1)
-    print(f"{len(entries)} cases -> {out} (manifest.json with {a.fold} folds)")
+    json.dump([dict(id=e["id"], fold=e["fold"], dir=e["id"], cohort=e["cohort"], n_cmb=e["n_cmb"], labelled=e["labelled"])
+               for e in entries], open(os.path.join(out, "manifest.json"), "w"), indent=1)
+    print(f"{len(entries)} cases -> {out} (manifest.json with {a.fold} folds, profile {a.profile})")
 
 
 # ---------------------------------------------------------------------------------------------------- train
@@ -310,7 +351,17 @@ def evaluate(a) -> None:
     members = sorted(glob.glob(os.path.join(model, "*", "modell.pt")))
     _run([PY, "-m", "cmb.training.full_data", "predict", "--models", *members, "--manifest", flat, "--out", pred, "--force"],
          env=dict(os.environ, CV5_DEV=_device(a.device)))
-    cell = model_cell(model)
+    summary = score_maps(entries, pred, model_cell(model))
+    summary["model"] = model
+    json.dump(summary, open(os.path.join(pred, "summary.json"), "w"), indent=1)
+
+
+def score_maps(entries, pred: str, cell: dict) -> dict:
+    """Masks with the cell -> <pred>/masks/, and the lesion metric of the paper (cmb.transfer.evaluate: code/metric.hits
+    per scan, pooled with summarize) over EVERY labelled scan -- CMB-free scans included, so their false positives count
+    (fp_per_case). Scans written by ``cmb preprocess`` without -l (manifest "labelled": false) are not scored."""
+    import nibabel as nib
+    from scipy import ndimage
     sys.path.insert(0, os.path.join(ROOT, "code"))
     from metric import hits, summarize
     os.makedirs(os.path.join(pred, "masks"), exist_ok=True)
@@ -325,17 +376,17 @@ def evaluate(a) -> None:
         out_lab, k = ndimage.label(m, structure=np.ones((3, 3, 3), bool))
         nib.save(nib.Nifti1Image(out_lab.astype(np.int16), ni.affine), f"{pred}/masks/{e['id']}_cmb_mask.nii.gz")
         lp = f"{e['dir']}/{e['id']}_label.nii.gz"
-        row = dict(id=e["id"], n_detected=int(k))
-        if os.path.exists(lp):
-            ref = np.asarray(nib.load(lp).dataobj) > 0
-            if ref.any() or e.get("n_cmb", 0) > 0:
-                h = hits(ref, m); row.update(h); rows.append(h)
+        if e.get("labelled", True) and os.path.exists(lp):
+            rows.append(hits(np.asarray(nib.load(lp).dataobj) > 0, m))
         print(f"{e['id']}: {k} CMB", flush=True)
-    summary = dict(cell=cell, model=model)
+    summary = dict(cell=cell, n_scored=len(rows), n_cmb_free_scored=sum(r["n_ref"] == 0 for r in rows))
     if rows:
-        s = summarize(rows); summary.update({k: round(float(v), 4) for k, v in s.items() if isinstance(v, (int, float))})
-        print(f"lesion F1 {s['f1']:.3f} (precision {s['precision']:.2f}, sensitivity {s['sensitivity']:.2f}) on {len(rows)} scans with labels")
-    json.dump(summary, open(os.path.join(pred, "summary.json"), "w"), indent=1)
+        s = summarize(rows)
+        summary.update({k: round(float(v), 4) for k, v in s.items() if isinstance(v, (int, float))})
+        print(f"lesion F1 {s['f1']:.3f} (precision {s['precision']:.2f}, sensitivity {s['sensitivity']:.2f}, "
+              f"{s['fp_per_case']:.2f} false positives per scan) on {len(rows)} labelled scans "
+              f"({summary['n_cmb_free_scored']} without CMB)")
+    return summary
 
 
 def _candidates(run: str, manifest: str, out: str) -> bool:
