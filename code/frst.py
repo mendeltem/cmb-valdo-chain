@@ -209,6 +209,14 @@ def selftest():
     print(f"  Hirnrand (6-vx-Saum) / Scheibe r2mm: ohne Median-Fuellung {q_ohne:.2f}, "
           f"mit {q_mit:.2f} {'OK' if q_mit < 0.5 else 'FEHLER'}")
 
+    # paper version: the comparison with the original MicrobleedNet code below only prints; without that package
+    # (installed separately, CMB_MICROBLEEDNET_SRC) it is skipped, the checks above decide the result
+    try:
+        _alt_frst(np.zeros((8, 8)))
+    except ImportError:
+        print("  (comparison with the original MicrobleedNet FRST skipped: microbleednet not installed)")
+        print("SELFTEST", "BESTANDEN" if ok else "FEHLGESCHLAGEN")
+        return ok
     # Alte Umsetzung auf derselben Schicht. Sie lief in preprocess_subject mit
     # dark=True auf dem NICHT invertierten FAST-Bild (Intensitaeten in Hunderten):
     # dort sind Blutungen dunkel -> dieselbe Szene invertiert und x1000.
