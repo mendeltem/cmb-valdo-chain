@@ -4,8 +4,8 @@ reaches ALL of:
   (1) F1 >= 95 % of the reference chain F1 of D (wk2 S/P, MB/paper/phase2_summary.json);
   (2) F1 not below the best external baseline of wk1 on D: one-sided 95 % lower bound of
       F1 - baseline > -0.02 (case bootstrap 2000, MB/extern/summary.json, v2 nested values);
-  (3) subject-level count ICC(3,1) >= 0.75 (single-measure, two-way random; the wk5
-      clinical_summary.json uses the same statistic, chain A: swi 0.9969 / t2star 0.9972).
+  (3) subject-level count ICC(3,1) >= 0.75 (two-way mixed, consistency, single measure;
+      cmb.agreement.icc31. The paper version's own copy returned ~0.997 for any data, fixed 16.11.2026).
 Chain F1(n) and the per-case (ref, pred) counts come from phase4/chains_frozenV.json
 (fold-pooled, all seeds of the same draw). Output: phase4/good_for_us.json
 """
@@ -20,6 +20,8 @@ _EXTMODELS = _os.environ.get("CMB_EXTERN_MODELS", _R + "/models/extern")
 _LABEL = _os.environ.get("CMB_INHOUSE_LABEL", "inhouse")
 import json
 import numpy as np
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))))  # repo root, for cmb.agreement
+from cmb.agreement import icc31  # ICC(3,1), Shrout & Fleiss 1979 (own copy was wrong, fixed 16.11.2026)
 
 P4 = _P + "/paper/phase4"
 N_ALL = {"t2star": 60, "swi": 49}
@@ -34,20 +36,6 @@ EXT_BEST = {"swi": {"f1": 0.637, "model": "SHIVA-CMB v2 nested"},
 def f1_counts(tp, fp, fn):
     return 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) else 0.0
 
-def icc31(x, y):
-    """ICC(3,1) exactly as wk5_klinisch.py icc31 (reference implementation):
-    two raters (reference, model), one-way random effects, absolute agreement."""
-    x, y = np.asarray(x, float), np.asarray(y, float)
-    n = len(x)
-    if n < 3:
-        return float("nan")
-    g = np.stack([x, y], axis=1)
-    ss_b = n * np.sum((g.mean(axis=1) - g.mean()) ** 2)
-    ss_w = np.sum((g - g.mean(axis=1, keepdims=True)) ** 2)
-    msb, msw = ss_b / 1, ss_w / (n - 1)
-    if np.isclose(msb, msw):
-        return 0.0 if msw == 0 else float("nan")
-    return float((msb - msw) / (msb + (n - 1) * msw))
 
 def main():
     d = json.load(open(f"{P4}/chains_frozenV.json"))

@@ -53,3 +53,15 @@ Found by testing the tag on own data. None of these changes touches the paper co
    * Static analysis (ruff, pyright basic, import-linter contracts in `pyproject.toml`), property tests
      (`tests/test_properties.py`, hypothesis), the freeze check of the research code (`tests/test_frozen.py`), and CI
      (`.github/workflows/checks.yml`: checks + `pytest tests -m "not valdo"`; VALDO tests carry the marker `valdo`).
+8. **ICC(3,1) of the paper scripts was wrong (16.11.2026; an agreed change of frozen research code).** The own `icc31`
+   copies in `scripts/paper/phase2_finetune/good_for_us.py`, `phase2_finetune/wk4b_update_summary.py` and
+   `phase3_cohorts/wk5_klinisch.py` multiplied the between-patient sum of squares by n (patients) instead of k = 2
+   (raters), did not divide it by its degrees of freedom n - 1, and used n - 1 instead of k - 1 in the denominator; they
+   returned about 0.997 for any data. `scripts/paper/phase1_arena/auswertung.py` had another wrong pairs formula. All
+   four now import one implementation, `cmb/agreement.py` (Shrout & Fleiss 1979 ICC(3,1) = McGraw & Wong 1996
+   ICC(C,1): two-way mixed, consistency, single rater). Test `tests/test_agreement.py`: Shrout & Fleiss Table 2
+   (ICC(3,1) = .71), an independent two-way ANOVA (statsmodels) and pingouin when installed, and independent counts
+   that must not come out near 1. Corrected per-patient count ICC(3,1) of the chain: T2*GRE 0.815, SWI 0.834, VALDO
+   0.823 (was 0.997 each). In the "good for us" rule (criterion 3: ICC >= 0.75) a few small-n cells now fail
+   criterion 3, but none of the reported smallest-n decisions changes, since criterion 1 or 2 already failed there.
+   `tests/frozen.sha256` regenerated for these four files; the tag `paper-v3-2026-11` keeps the original code.

@@ -39,20 +39,9 @@ def best_ext(mod):
     return best
 ext_best = {m: {"f1": best_ext(m)[0], "model": best_ext(m)[1]} for m in ("swi", "t2star")}
 
-# --- ICC(3,1) exactly as wk5_klinisch.py (formula verified identical) ---
 import numpy as np
-def icc31(x, y):
-    x, y = np.asarray(x, float), np.asarray(y, float)
-    n = len(x)
-    if n < 3:
-        return float("nan")
-    g = np.stack([x, y], axis=1)
-    ss_b = n * np.sum((g.mean(axis=1) - g.mean()) ** 2)
-    ss_w = np.sum((g - g.mean(axis=1, keepdims=True)) ** 2)
-    msb, msw = ss_b / 1, ss_w / (n - 1)
-    if np.isclose(msb, msw):
-        return 0.0 if msw == 0 else float("nan")
-    return float((msb - msw) / (msb + (n - 1) * msw))
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))))  # repo root, for cmb.agreement
+from cmb.agreement import icc31  # ICC(3,1), Shrout & Fleiss 1979 (own copy was wrong, fixed 16.11.2026)
 
 N_ALL = {"t2star": 60, "swi": 49}
 N_ORDER = [3, 5, 10, 15, 20, 30, 40]
@@ -132,11 +121,11 @@ sec["wk4b_verification"] = {
     "date": "2026-11-07",
     "method": "recomputed per (target, variant, n) from stored per-case (tp,fp,fn) in chains_frozenV.json "
               "(fold-pooled, all seeds of the same draw); case bootstrap 2000 draws (seed 42); ICC(3,1) "
-              "two-way absolute-agreement exactly as wk5_klinisch.py icc31()",
+              "two-way mixed, consistency, single measure (cmb.agreement.icc31; fixed 16.11.2026)",
     "references_reconfirmed": {
         "reference_f1": ref_f1,
         "ext_best": ext_best,
-        "clinical_icc_chainA": "present in paper/clinical_summary.json (swi 0.9969 / t2star 0.9972)"},
+        "clinical_icc_chainA": "paper/clinical_summary.json (values before 16.11.2026 came from the wrong ICC copy)"},
     "good_for_us_n_wk0b": prev_n,
     "changed": None,
 }
