@@ -33,6 +33,8 @@ from scipy.stats import spearmanr, pearsonr
 import sys
 sys.path.insert(0, _R)
 from cmb.metrics import hits
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))))  # repo root, for cmb.agreement
+from cmb.agreement import icc31 as _icc31
 
 C26 = np.ones((3, 3, 3), dtype=bool)
 FAELLE = _CASES
@@ -113,16 +115,8 @@ def bootstrap_ci(rows, n_draws=2000, seed=0):
 
 
 def icc31(pairs):
-    """ICC(3,1): ein Beoachter je Paar, mittlere Schätzung (Shrout & Fleiss 1979)."""
-    x = np.array([a for a, b in pairs], float)
-    y = np.array([b for a, b in pairs], float)
-    n, k = len(pairs), 2
-    xm, ym = x.mean(), y.mean()
-    ssx = ((x - xm) ** 2).sum(); ssy = ((y - ym) ** 2).sum()
-    ssxy = ((x - xm) * (y - ym)).sum()
-    msb = (ssx + ssy) / (k * (n - 1))
-    mse = (2 * ssxy) / (k * (n - 1))
-    return float((msb - mse) / (msb + (n - 2) * mse))
+    """ICC(3,1) of (reference, model) count pairs: cmb.agreement.icc31 (Shrout & Fleiss 1979; fixed 16.11.2026)."""
+    return _icc31([a for a, b in pairs], [b for a, b in pairs])
 
 
 def evaluate(cohort, out_dir, threshold_fixed):

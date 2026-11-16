@@ -61,7 +61,7 @@ line-ending = "lf"
 
 [tool.pyright]
 include = ["cmb/cli.py", "cmb/commands.py", "cmb/predict_cli.py", "cmb/api.py", "cmb/checks.py", "cmb/nifti.py",
-           "cmb/selftest.py", "cmb/pretrained.py", "cmb/envfile.py", "cmb/synthetic.py", "cmb/__init__.py",
+           "cmb/selftest.py", "cmb/pretrained.py", "cmb/envfile.py", "cmb/synthetic.py", "cmb/agreement.py", "cmb/__init__.py",
            "cmb/__main__.py", "tests", "examples/python"]
 typeCheckingMode = "basic"
 pythonVersion = "3.10"
@@ -100,5 +100,5 @@ forbidden_modules = ["cmb.tests"]
 [[tool.importlinter.contracts]]
 name = "the input checks and helpers depend on nothing above them"
 type = "forbidden"
-source_modules = ["cmb.checks", "cmb.nifti", "cmb.paths", "cmb.envfile"]
+source_modules = ["cmb.checks", "cmb.nifti", "cmb.paths", "cmb.envfile", "cmb.agreement"]
 forbidden_modules = ["cmb.cli", "cmb.commands", "cmb.predict_cli", "cmb.api", "cmb.selftest", "cmb.pretrained"]

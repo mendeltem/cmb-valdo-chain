@@ -41,6 +41,8 @@ import numpy as np
 import nibabel as nib
 import nibabel.processing
 from scipy import ndimage
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))))  # repo root, for cmb.agreement
+from cmb.agreement import icc31  # ICC(3,1), Shrout & Fleiss 1979 (own copy was wrong, fixed 16.11.2026)
 
 V = _R
 MB = _P
@@ -97,19 +99,6 @@ def spearman(x, y):
     return float(np.corrcoef(rank(x), rank(y))[0, 1])
 
 
-def icc31(x, y):
-    """ICC(3,1): two raters (reference, model), one-way random effects, absolute agreement."""
-    x, y = np.asarray(x, float), np.asarray(y, float)
-    n = len(x)
-    if n < 3:
-        return float("nan")
-    g = np.stack([x, y], axis=1)
-    ss_b = n * np.sum((g.mean(axis=1) - g.mean()) ** 2)
-    ss_w = np.sum((g - g.mean(axis=1, keepdims=True)) ** 2)
-    msb, msw = ss_b / 1, ss_w / (n - 1)
-    if np.isclose(msb, msw):
-        return 0.0 if msw == 0 else float("nan")
-    return float((msb - msw) / (msb + (n - 1) * msw))
 
 
 def cohens_kappa(a, b):
